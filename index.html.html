@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guidely Trivia Page Generator</title>
+<style>
+:root{--brand:#7b1fa2;--brand2:#a21caf;--soft:#f6eafb;--ink:#1b1b2f;--muted:#5f6275;--line:#e8e6ef;--bad:#c62828;--ok:#0f9d58;--warn:#b26a00}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#faf9fc;color:var(--ink);line-height:1.5}
+header.app{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:10px}
+header.app .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:24px;color:var(--brand);letter-spacing:-.5px}
+header.app small{color:var(--muted);font-size:14px;margin-left:6px}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.card h2{font-size:17px;margin:0 0 12px;color:var(--brand)}
+.card h2 small{font-weight:400;color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:13px;font-weight:700;margin-bottom:4px}
+label span{font-weight:400;color:var(--muted)}
+input[type=text],input[type=number],textarea,select{width:100%;padding:9px 11px;border:1px solid #d6d2e2;border-radius:9px;font:inherit;font-size:14px;background:#fff}
+textarea{min-height:90px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.full{grid-column:1/-1}
+.btn{background:linear-gradient(135deg,var(--brand2),var(--brand));color:#fff;border:0;border-radius:10px;padding:10px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:#fff;color:var(--brand);border:1.5px solid var(--brand)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row select{width:auto;min-width:230px}
+.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;font-weight:600;font-size:13px;cursor:pointer}
+.tab.on{background:var(--soft);border-color:var(--brand);color:var(--brand)}
+.pane{display:none}.pane.on{display:block}
+.msg{font-size:13px;margin-top:8px}
+.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}.msg.warn{color:var(--warn)}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.field{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:#fcfbfe}
+.field .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px}
+.field .top b{font-size:13px}
+.field .val{font-size:14px;word-break:break-word;white-space:pre-wrap}
+.cnt{font-size:12px;color:var(--muted)}.cnt.over{color:var(--bad);font-weight:700}
+iframe{width:100%;height:780px;border:1px solid var(--line);border-radius:12px;background:#fff}
+#results{display:none}
+details.adv summary{cursor:pointer;font-weight:700;font-size:14px;margin-bottom:10px}
+details.panel{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:#fcfbfe}
+details.panel>summary{cursor:pointer;font-weight:700;font-size:15px;color:var(--ink)}
+details.panel>summary span{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
+details.panel .grid{margin-top:12px}
+ul.issues{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--bad)}
+.pill{display:inline-block;font-size:11px;font-weight:700;background:var(--soft);color:var(--brand);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+<header class="app">
+  <div class="brand"><img src="https://guidely.in/assets/images/home/guidely-logo.svg" alt="Guidely" style="height:36px;width:auto;display:block" onerror="this.onerror=null;this.src='data:image/png;base64,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'"></div>
+  <small>Trivia Page Generator</small>
+</header>
+
+<main>
+  <div class="card">
+    <h2>1. Page details</h2>
+    <div class="grid">
+      <div class="full"><label>Trivia Name <span>(becomes H1 and URL slug, e.g. "RRB NTPC Reasoning Questions")</span></label>
+        <input type="text" id="name" placeholder="RRB NTPC Reasoning Questions"></div>
+      <div><label>Exam Name <span>(used in intro, FAQ, mock test CTA, side panel; FAQ dropdown 1 picks from this)</span></label>
+        <input type="text" id="exam" placeholder="RRB NTPC"></div>
+      <div><label>Exam page URL <span>(optional, for breadcrumb)</span></label>
+        <input type="text" id="examUrl" placeholder="https://guidely.in/rrb-ntpc"></div>
+      <div><label>Mock test / Test series URL <span>(blank = auto from exam name)</span></label>
+        <input type="text" id="mockUrl" placeholder="https://guidely.in/rrb-ntpc/test-series"></div>
+      <div><label>PDF download / signup URL</label>
+        <input type="text" id="pdfUrl" placeholder="https://guidely.in/login"></div>
+    </div>
+    <details class="adv" style="margin-top:12px">
+      <summary>Advanced settings (saved in this browser)</summary>
+      <div class="grid">
+        <div><label>Site base URL</label><input type="text" id="base" value="https://guidely.in"></div>
+        <div><label>Page path prefix</label><input type="text" id="prefix" value="/questions/"></div>
+        <div><label>Inline CTA after every N questions</label><input type="number" id="ctaEvery" value="5" min="2" max="20"></div>
+        <div class="full"><label>Logo image URL <span>(used in the top bar; a built-in copy is shown if this URL cannot load)</span></label><input type="text" id="logoUrl" value="https://guidely.in/assets/images/home/guidely-logo.svg"></div>
+        <div class="full"><label>More Important Questions (chips at the bottom) <span>(one per line: Title | URL)</span></label>
+          <textarea id="related" placeholder="RRB NTPC GK Questions | https://guidely.in/questions/rrb-ntpc-gk-questions"></textarea></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>2. Questions data</h2>
+    <div class="tabs">
+      <div class="tab on" data-p="p-link">Google Sheet link</div>
+      <div class="tab" data-p="p-paste">Paste from sheet</div>
+      <div class="tab" data-p="p-file">Upload CSV / XLSX</div>
+    </div>
+    <div class="pane on" id="p-link">
+      <div class="grid">
+        <div class="full"><label>Sheet link <span>(share as "Anyone with the link can view")</span></label>
+          <input type="text" id="sheetUrl" value="https://docs.google.com/spreadsheets/d/1Bk7pZeGLeBz5aq7ExPz_30TlHkIkPxIJJrav5ISAGFU/edit?gid=0#gid=0"></div>
+        <div><label>Tab name</label><input type="text" id="tabName" value="Trivia Questions"></div>
+        <div style="align-self:end"><button class="btn ghost" id="loadBtn" type="button">Load from sheet</button></div>
+      </div>
+    </div>
+    <div class="pane" id="p-paste">
+      <label>Select all cells in Google Sheets (including header row), copy, and paste here</label>
+      <textarea id="pasteBox" style="min-height:140px"></textarea>
+    </div>
+    <div class="pane" id="p-file">
+      <label>Choose .csv, .tsv or .xlsx</label>
+      <input type="file" id="fileIn" accept=".csv,.tsv,.xlsx,.xls">
+    </div>
+    <div class="hint">Columns needed: Question | Option 1 | Option 2 | Option 3 | Option 4 | Correct Answer (1-4) | Solution</div>
+    <div class="msg" id="loadMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. Intro and FAQs <small>(auto-drafted from your selections; edit freely)</small></h2>
+    <div class="grid">
+      <div class="full"><label>Intro paragraph <span>(please make it unique for every page)</span></label><textarea id="intro" placeholder="Auto-filled when you generate. Edit freely."></textarea></div>
+      <div><label>FAQ Exam <span>(dropdown 1: auto-picked from Exam Name, you can change it)</span></label>
+        <select id="faqExam"><option value="-1">— Select exam —</option></select></div>
+      <div><label>FAQ Subject <span>(dropdown 2: auto-picked from Trivia Name, you can change it)</span></label>
+        <select id="faqSubj"><option value="-1">— Select subject —</option></select></div>
+      <div class="full">
+        <div class="row">
+          <select id="faqType" aria-label="FAQ type to add">
+            <option value="1">FAQ 1: Topics asked in this subject</option>
+            <option value="2">FAQ 2: Subject-wise weightage</option>
+            <option value="3">FAQ 3: Can I download as PDF?</option>
+            <option value="4">FAQ 4: Where can I practise more?</option>
+            <option value="0">Blank FAQ (write your own)</option>
+          </select>
+          <button class="btn sm" id="faqAdd" type="button">+ Add FAQ</button>
+          <button class="btn sm ghost" id="faqFill" type="button">Fill all 4 FAQs (replaces list)</button>
+        </div>
+        <div class="msg" id="faqHint"></div>
+      </div>
+      <div class="full"><label>FAQs <span>(format: Q: question, then A: answer, blank line between FAQs; lines starting with | make a table)</span></label><textarea id="faqs" style="min-height:240px" placeholder="Auto-filled from the dropdowns above."></textarea></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4. Page panels: top, right, bottom <small>(all auto-filled from Exam Name; change anything you need)</small></h2>
+
+    <details class="panel" open>
+      <summary>Top bar <span>logo, menu links and Get Started button</span></summary>
+      <div class="grid">
+        <div><label>Show top bar</label><select id="incTop"><option value="1">Yes</option><option value="0">No (blog already has its own header)</option></select></div>
+        <div class="row" style="align-self:end"><button class="btn sm ghost" type="button" data-reset="top">Reset top bar to auto</button></div>
+        <div class="full"><label>Language dropdown (English / हिन्दी) <span>(sits left of the button; page opens in English, Hindi is translated on selection and remembered for the next pages)</span></label><select id="incLang"><option value="1">Show</option><option value="0">Hide</option></select></div>
+        <div class="full"><label>Menu links <span>(one per line: Label | URL)</span></label><textarea id="navLinks" style="min-height:96px"></textarea></div>
+        <div><label>Button label</label><input type="text" id="navCtaLabel"></div>
+        <div><label>Button URL</label><input type="text" id="navCtaUrl"></div>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary>Right side panel <span>promo box and related resources</span></summary>
+      <div class="grid">
+        <div><label>Show side panel</label><select id="incSide"><option value="1">Yes</option><option value="0">No (full-width page)</option></select></div>
+        <div class="row" style="align-self:end"><button class="btn sm ghost" type="button" data-reset="side">Reset side panel to auto</button></div>
+        <div class="full"><label>Promo title</label><input type="text" id="sideTitle"></div>
+        <div class="full"><label>Promo bullet points <span>(one per line)</span></label><textarea id="sideBullets" style="min-height:80px"></textarea></div>
+        <div><label>Promo button label</label><input type="text" id="sideBtnLabel"></div>
+        <div><label>Promo button URL</label><input type="text" id="sideBtnUrl"></div>
+        <div class="full"><label>Related resources title</label><input type="text" id="relTitle"></div>
+        <div class="full"><label>Related resources links <span>(one per line: Label | URL)</span></label><textarea id="relLinks" style="min-height:96px"></textarea></div>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary>Bottom footer <span>columns and copyright</span></summary>
+      <div class="grid">
+        <div><label>Show footer</label><select id="incFoot"><option value="1">Yes</option><option value="0">No (blog already has its own footer)</option></select></div>
+        <div class="row" style="align-self:end"><button class="btn sm ghost" type="button" data-reset="foot">Reset footer to auto</button></div>
+        <div class="full"><label>Footer columns <span>("## Column title", then lines of Label | URL)</span></label><textarea id="footLinks" style="min-height:190px"></textarea></div>
+        <div class="full"><label>Copyright text</label><input type="text" id="footCopy"></div>
+      </div>
+    </details>
+    <div class="hint">Anything you edit here is remembered in this browser (top bar, footer and promo text). Fields you do not touch keep following the Exam Name automatically.</div>
+  </div>
+
+  <div class="row" style="margin-bottom:16px">
+    <button class="btn" id="genBtn" type="button">Generate page</button>
+    <span class="msg" id="genMsg"></span>
+  </div>
+
+  <div id="results">
+    <div class="card">
+      <h2>A. SEO fields <small>(paste into your CMS SEO / slug fields)</small></h2>
+      <div id="seoFields"></div>
+    </div>
+    <div class="card">
+      <h2>B. Page body HTML <small>(paste into the blog's HTML / source editor)</small></h2>
+      <div class="row" style="margin-bottom:8px"><button class="btn sm" data-copy="bodyOut" type="button">Copy body HTML</button></div>
+      <textarea id="bodyOut" style="min-height:160px" readonly></textarea>
+    </div>
+    <div class="card">
+      <h2>C. Schema (JSON-LD) <small>(Quiz + FAQ + Breadcrumb; paste in head/schema field, or at the end of the body if your CMS has none)</small></h2>
+      <div class="row" style="margin-bottom:8px"><button class="btn sm" data-copy="schemaOut" type="button">Copy schema</button></div>
+      <textarea id="schemaOut" style="min-height:120px" readonly></textarea>
+      <div class="hint">Tip: if the schema is not pasted separately, the "Body + schema together" button below includes it.</div>
+    </div>
+    <div class="card">
+      <h2>D. Preview and downloads</h2>
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn sm" id="copyAll" type="button">Copy body + schema together</button>
+        <button class="btn sm ghost" id="dlFull" type="button">Download full page (.html)</button>
+      </div>
+      <iframe id="preview" title="Preview"></iframe>
+    </div>
+  </div>
+</main>
+
+<!-- ============================ CORE (pure functions, no DOM) ============================ -->
+<script id="core">
+var CLOSE_SCRIPT = '<' + '/script>';
+
+var LOGO_DEFAULT='https://guidely.in/assets/images/home/guidely-logo.svg';
+var LOGO_FB='data:image/png;base64,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';
+
+/* Exam and subject FAQ data, parsed from "Guidely_RRB_SSC_Subject_Wise_FAQs.pdf" */
+var FAQ_DATA = [{"label":"RRB Group D","short":"RRB Group D","aliases":["rrb group d","group d"],"subjects":[{"s":"Mathematics","q":"Which topics are asked in RRB Group D Mathematics?","a":"Number systems, BODMAS, decimals, fractions, LCM and HCF, ratios, percentages, mensuration, time and work, time and distance, simple and compound interest, profit and loss, algebra, geometry, trigonometry, statistics, age calculations, calendar and clock, and pipes and cisterns."},{"s":"Reasoning","q":"Which topics are asked in RRB Group D Reasoning?","a":"Analogies, number and alphabetical series, coding-decoding, mathematical operations, relationships, syllogism, Venn diagrams, puzzles, classification, directions, analytical reasoning and statement-based questions."},{"s":"General Science","q":"Which topics are asked in RRB Group D General Science?","a":"Physics, Chemistry and Life Sciences, generally at the Class 10 CBSE level."},{"s":"General Awareness","q":"Which topics are asked in RRB Group D General Awareness?","a":"Current affairs, Indian history, geography, polity, economics, culture, sports, environmental issues, and general scientific and technological developments."}],"weightage":{"rows":[["Mathematics","25","25"],["Reasoning","30","30"],["General Science","25","25"],["General Awareness & Current Affairs","20","20"]],"total":["100","100"],"note":"100 questions / 100 marks. Each question carries 1 mark; 1/3 mark is deducted for each incorrect answer.","review":false}},{"label":"RRB NTPC Graduate and Undergraduate","short":"RRB NTPC","aliases":["rrb ntpc","ntpc"],"subjects":[{"s":"Mathematics","q":"Which topics are asked in RRB NTPC Mathematics?","a":"Number systems, decimals, fractions, LCM and HCF, ratios and proportions, percentages, mensuration, time and work, time and distance, interest, profit and loss, algebra, geometry, trigonometry and elementary statistics."},{"s":"Reasoning","q":"Which topics are asked in RRB NTPC Reasoning?","a":"Analogies, number and alphabetical series, coding-decoding, mathematical operations, relationships, syllogism, jumbling, Venn diagrams, puzzles, data sufficiency, statement-conclusion, decision-making, maps and graph interpretation."},{"s":"General Awareness","q":"Which topics are asked in RRB NTPC General Awareness?","a":"Current affairs, Indian history, geography, polity, economy, general science, scientific developments, sports, culture, literature, computers and other topics specified in the official syllabus."}],"weightage":{"rows":[["General Awareness","40","40"],["Mathematics","30","30"],["General Intelligence & Reasoning","30","30"]],"total":["100","100"],"note":"100 questions / 100 marks. Each question carries 1 mark; 1/3 mark is deducted for each incorrect answer.","review":false}},{"label":"RRB ALP","short":"RRB ALP","aliases":["rrb alp"],"subjects":[{"s":"Mathematics","q":"Which topics are asked in RRB ALP Mathematics?","a":"Number systems, BODMAS, decimals, fractions, LCM and HCF, ratios, percentages, mensuration, time and work, time and distance, interest, profit and loss, algebra, geometry, trigonometry, statistics, age calculations, calendar and clock, and pipes and cisterns."},{"s":"Mental Ability","q":"Which topics are asked in RRB ALP Mental Ability?","a":"Analogies, series, coding-decoding, relationships, syllogism, classification, directions, Venn diagrams, analytical reasoning, data interpretation, conclusions, decision-making and statement-based reasoning."},{"s":"General Science","q":"Which topics are asked in RRB ALP General Science?","a":"Physics, Chemistry and Life Sciences at approximately the Class 10 CBSE level."},{"s":"General Awareness","q":"Which topics are asked in RRB ALP General Awareness?","a":"Current affairs, science and technology, sports, culture, geography, history, polity, economy and other general awareness topics prescribed by RRB."}],"weightage":{"rows":[["Mathematics","20","20"],["Mental Ability","25","25"],["General Science","20","20"],["General Awareness & Current Affairs","10","10"]],"total":["75","75"],"note":"75 questions / 75 marks. Each question carries 1 mark; 1/3 mark is deducted for each incorrect answer. Verify against the applicable ALP CEN.","review":false}},{"label":"RRB Technician Grade 1 and Grade 3","short":"RRB Technician","aliases":["rrb technician","technician"],"subjects":[{"s":"Grade 1 Mathematics","q":"Which topics are asked in RRB Technician Grade 1 Mathematics?","a":"Number systems, BODMAS, fractions, decimals, ratios, percentages, mensuration, time and work, time and distance, interest, profit and loss, algebra, geometry and elementary statistics."},{"s":"Grade 1 Reasoning","q":"Which topics are asked in RRB Technician Grade 1 Reasoning?","a":"Analogies, series, coding-decoding, relationships, syllogism, Venn diagrams, data sufficiency, classification, directions, analytical reasoning and conclusions."},{"s":"Grade 1 Basic Science and Engineering","q":"Which topics are asked in RRB Technician Grade 1 Basic Science and Engineering?","a":"Fundamental concepts of engineering, electricity, electronics, measurements, units, work and power, energy, heat, mechanics, materials, safety and other topics specified in the post-specific syllabus."},{"s":"Grade 3 General Science","q":"Which topics are asked in RRB Technician Grade 3 General Science?","a":"Physics, Chemistry and Life Sciences at approximately the Class 10 CBSE level."}],"weightage":{"rows":[],"total":null,"note":"The exact question distribution differs between Technician Grade 1 Signal and Technician Grade 3. Check the relevant CEN and the post-specific notification for the subject-wise questions and marks.","review":true}},{"label":"RRB JE","short":"RRB JE","aliases":["rrb je"],"subjects":[{"s":"Mathematics","q":"Which topics are asked in RRB JE Mathematics?","a":"Number systems, BODMAS, decimals, fractions, LCM and HCF, ratios, percentages, mensuration, time and work, interest, profit and loss, algebra, geometry, trigonometry and statistics."},{"s":"Reasoning","q":"Which topics are asked in RRB JE Reasoning?","a":"Analogies, series, coding-decoding, mathematical operations, relationships, syllogism, Venn diagrams, classification, directions, analytical reasoning and decision-making."},{"s":"General Awareness","q":"Which topics are asked in RRB JE General Awareness?","a":"Current affairs, Indian geography, history, culture, polity, economy, environment, sports, and scientific and technological developments."},{"s":"General Science","q":"Which topics are asked in RRB JE General Science?","a":"Physics, Chemistry and Life Sciences at the Class 10 CBSE level."}],"weightage":{"rows":[["Mathematics","30","30"],["General Intelligence & Reasoning","25","25"],["General Awareness","15","15"],["General Science","30","30"]],"total":["100","100"],"note":"100 questions / 100 marks. Each question carries 1 mark; 1/3 mark is deducted for each incorrect answer.","review":false}},{"label":"RRB Station Master","short":"RRB Station Master","aliases":["rrb station master","station master"],"subjects":[{"s":"Mathematics","q":"Which topics are asked in RRB Station Master Mathematics?","a":"Number systems, percentages, ratios, averages, profit and loss, interest, time and work, time and distance, mensuration, algebra, geometry and elementary statistics."},{"s":"Reasoning","q":"Which topics are asked in RRB Station Master Reasoning?","a":"Analogies, series, coding-decoding, relationships, syllogism, Venn diagrams, puzzles, data sufficiency, classification, directions and analytical reasoning."},{"s":"General Awareness","q":"Which topics are asked in RRB Station Master General Awareness?","a":"Current affairs, history, geography, polity, economics, science and technology, sports, culture and other topics in the NTPC syllabus."}],"weightage":{"rows":[["General Awareness","40","40"],["Mathematics","30","30"],["General Intelligence & Reasoning","30","30"]],"total":["100","100"],"note":"NTPC CBT 1 pattern: 100 questions / 100 marks. Station Master also has a separate aptitude-test requirement later in selection.","review":false}},{"label":"RRB Section Controller","short":"RRB Section Controller","aliases":["rrb section controller","section controller"],"subjects":[{"s":"Reasoning","q":"Which topics are asked in RRB Section Controller Reasoning?","a":"Prepare logical reasoning, analytical reasoning, series, coding-decoding, relationships, classification, directions, numerical reasoning and problem-solving according to the dedicated notification."}],"weightage":{"rows":[],"total":null,"note":"The subject-wise question distribution is given in the dedicated Section Controller CEN and is different from the NTPC pattern. Recruitment also includes a separate Computer Based Aptitude Test.","review":true}},{"label":"RRB Pharmacist","short":"RRB Pharmacist","aliases":["rrb pharmacist","pharmacist"],"subjects":[{"s":"Professional Ability","q":"Which topics are asked in RRB Pharmacist Professional Ability?","a":"Pharmaceutics, pharmaceutical chemistry, pharmacology, pharmacognosy, pharmaceutical jurisprudence, hospital and clinical pharmacy, pharmaceutical analysis and other areas in the prescribed Pharmacy syllabus."},{"s":"General Awareness","q":"Which topics are asked in RRB Pharmacist General Awareness?","a":"Current affairs, history, geography, polity, economics, sports, culture, science and technology."},{"s":"Arithmetic and Reasoning","q":"Which topics are asked in RRB Pharmacist Arithmetic and Reasoning?","a":"Number systems, ratios, percentages, averages, profit and loss, interest, time and work, series, analogies, coding-decoding, relationships, directions and logical reasoning."},{"s":"General Science","q":"Which topics are asked in RRB Pharmacist General Science?","a":"Basic Physics, Chemistry and Life Sciences relevant to the notified examination syllabus."}],"weightage":{"rows":[],"total":null,"note":"The Paramedical recruitment uses a separate single-CBT pattern, not the NTPC-style CBT 1. Check the current Paramedical CEN for the subject-wise question counts.","review":true}},{"label":"RRB Ministerial and Isolated Category","short":"RRB Ministerial and Isolated Category","aliases":["rrb ministerial","ministerial and isolated"],"subjects":[{"s":"Reasoning","q":"Which topics are asked in RRB Ministerial and Isolated Category Reasoning?","a":"Where prescribed, the syllabus may cover analogies, series, coding-decoding, relationships, classification, directions, syllogism and analytical reasoning."}],"weightage":{"rows":[],"total":null,"note":"There is no single distribution applicable to every post in this category. Check the relevant post's notification for subjects, question counts and marks.","review":true}},{"label":"SSC CGL Tier I","short":"SSC CGL","aliases":["ssc cgl"],"subjects":[{"s":"General Intelligence and Reasoning","q":"Which topics are asked in SSC CGL General Intelligence and Reasoning?","a":"Analogies, classification, series, coding-decoding, blood relations, directions, syllogism, Venn diagrams, spatial visualization, embedded figures, critical thinking and problem-solving."},{"s":"General Awareness","q":"Which topics are asked in SSC CGL General Awareness?","a":"Current affairs, history, culture, geography, economic scene, general policy, Indian Constitution and scientific research."},{"s":"Quantitative Aptitude","q":"Which topics are asked in SSC CGL Quantitative Aptitude?","a":"Number systems, percentages, ratios, averages, interest, profit and loss, discount, time and work, time and distance, algebra, geometry, mensuration, trigonometry and data interpretation."},{"s":"English Comprehension","q":"Which topics are asked in SSC CGL English Comprehension?","a":"Reading comprehension, grammar, vocabulary, synonyms, antonyms, sentence correction, fill in the blanks, spelling, idioms and phrases, and sentence structure."}],"weightage":{"rows":[["General Intelligence & Reasoning","25","50"],["General Awareness","25","50"],["Quantitative Aptitude","25","50"],["English Comprehension","25","50"]],"total":["100","200"],"note":"100 questions / 200 marks. Each correct answer carries 2 marks; 0.50 mark is deducted for each incorrect answer.","review":false}},{"label":"SSC CHSL Tier I","short":"SSC CHSL","aliases":["ssc chsl"],"subjects":[{"s":"General Intelligence","q":"Which topics are asked in SSC CHSL General Intelligence?","a":"Analogies, classification, series, coding-decoding, blood relations, directions, logical reasoning, syllogism, Venn diagrams, paper folding, embedded figures and problem-solving."},{"s":"General Awareness","q":"Which topics are asked in SSC CHSL General Awareness?","a":"Current affairs, history, geography, culture, polity, economy, scientific research, sports and general knowledge."},{"s":"Quantitative Aptitude","q":"Which topics are asked in SSC CHSL Quantitative Aptitude?","a":"Number systems, arithmetic, percentages, ratios, averages, interest, profit and loss, time and work, time and distance, algebra, geometry, mensuration and data interpretation."},{"s":"English Language","q":"Which topics are asked in SSC CHSL English Language?","a":"Grammar, vocabulary, reading comprehension, synonyms, antonyms, sentence correction, spelling, idioms, phrases and sentence structure."}],"weightage":{"rows":[["English Language","25","50"],["General Intelligence","25","50"],["Quantitative Aptitude","25","50"],["General Awareness","25","50"]],"total":["100","200"],"note":"100 questions / 200 marks. Each correct answer carries 2 marks; 0.50 mark is deducted for each incorrect answer.","review":false}},{"label":"SSC MTS Session I and II","short":"SSC MTS","aliases":["ssc mts"],"subjects":[{"s":"Reasoning Ability and Problem Solving","q":"Which topics are asked in SSC MTS Reasoning Ability and Problem Solving?","a":"Analogy, classification, number and alphabetical series, coding-decoding, problem-solving, non-verbal reasoning, directions, similarities and differences, and basic logical reasoning."},{"s":"Numerical and Mathematical Ability","q":"Which topics are asked in SSC MTS Numerical and Mathematical Ability?","a":"Integers, whole numbers, LCM and HCF, decimals, fractions, BODMAS, percentages, ratios, averages, interest, profit and loss, discounts, time and work, distance and time, and basic geometry."},{"s":"General Awareness","q":"Which topics are asked in SSC MTS General Awareness?","a":"Current affairs, history, geography, art and culture, civics, economics, general science and environmental studies."},{"s":"English Language and Comprehension","q":"Which topics are asked in SSC MTS English Language and Comprehension?","a":"Vocabulary, grammar, sentence structure, synonyms, antonyms, correct usage and reading comprehension."}],"weightage":{"rows":[["Session I — Reasoning Ability & Problem Solving","20","60"],["Session I — Numerical & Mathematical Ability","20","60"],["Session II — General Awareness","25","75"],["Session II — English Language & Comprehension","25","75"]],"total":["90","270"],"note":"Session I: no negative marking under the 2025 pattern. Session II: 1 mark deducted for each incorrect answer.","review":false}},{"label":"SSC Selection Post","short":"SSC Selection Post","aliases":["ssc selection post","selection post"],"subjects":[{"s":"General Intelligence","q":"Which topics are asked in SSC Selection Post General Intelligence?","a":"Analogies, classification, series, coding-decoding, relationships, similarities and differences, spatial visualization, problem-solving and analytical reasoning."},{"s":"General Awareness","q":"Which topics are asked in SSC Selection Post General Awareness?","a":"Current affairs, history, geography, culture, polity, economy, scientific research, sports and general knowledge."},{"s":"Quantitative Aptitude","q":"Which topics are asked in SSC Selection Post Quantitative Aptitude?","a":"Arithmetic, percentages, ratios, averages, interest, profit and loss, number systems, time and work, time and distance, algebra, geometry, mensuration and data interpretation."},{"s":"English Language","q":"Which topics are asked in SSC Selection Post English Language?","a":"Grammar, vocabulary, comprehension, synonyms, antonyms, sentence correction, spelling and sentence structure."}],"weightage":{"rows":[["General Intelligence","25","50"],["General Awareness","25","50"],["Quantitative Aptitude","25","50"],["English Language","25","50"]],"total":["100","200"],"note":"Standard pattern: 100 questions / 200 marks; 2 marks per question and 0.50 mark deducted per incorrect answer. Confirm the educational-level-specific notification.","review":false}},{"label":"SSC CPO Paper I","short":"SSC CPO","aliases":["ssc cpo"],"subjects":[{"s":"General Intelligence and Reasoning","q":"Which topics are asked in SSC CPO General Intelligence and Reasoning?","a":"Analogies, similarities and differences, space visualization, problem-solving, analysis, judgment, decision-making, visual memory, observation, relationships and arithmetic reasoning."},{"s":"General Knowledge and General Awareness","q":"Which topics are asked in SSC CPO General Knowledge and General Awareness?","a":"Current affairs, history, geography, polity, economics, culture, sports, scientific developments and general knowledge."},{"s":"Quantitative Aptitude","q":"Which topics are asked in SSC CPO Quantitative Aptitude?","a":"Arithmetic, percentages, ratios, averages, interest, profit and loss, time and work, time and distance, algebra, geometry, mensuration and trigonometry."},{"s":"English Comprehension","q":"Which topics are asked in SSC CPO English Comprehension?","a":"Reading comprehension, grammar, vocabulary, synonyms, antonyms, sentence improvement, error spotting, fill in the blanks and sentence structure."}],"weightage":{"rows":[["General Intelligence & Reasoning","50","50"],["General Knowledge & General Awareness","50","50"],["Quantitative Aptitude","50","50"],["English Comprehension","50","50"]],"total":["200","200"],"note":"200 questions / 200 marks. Each question carries 1 mark; 0.25 mark is deducted for every incorrect answer.","review":false}},{"label":"SSC Stenographer Grade C and D","short":"SSC Stenographer","aliases":["ssc stenographer","stenographer"],"subjects":[{"s":"General Intelligence and Reasoning","q":"Which topics are asked in SSC Stenographer General Intelligence and Reasoning?","a":"Analogies, similarities and differences, space visualization, problem-solving, analysis, judgment, decision-making, visual memory, relationships, arithmetic reasoning and non-verbal reasoning."},{"s":"General Awareness","q":"Which topics are asked in SSC Stenographer General Awareness?","a":"Current affairs, history, geography, polity, economy, culture, sports, scientific developments and general knowledge."},{"s":"English Language and Comprehension","q":"Which topics are asked in SSC Stenographer English Language and Comprehension?","a":"Grammar, vocabulary, reading comprehension, synonyms, antonyms, sentence correction, spelling, idioms and phrases."}],"weightage":{"rows":[["General Intelligence & Reasoning","50","50"],["General Awareness","50","50"],["English Language & Comprehension","100","100"]],"total":["200","200"],"note":"200 questions / 200 marks. Each question carries 1 mark; 0.25 mark is deducted for each incorrect answer.","review":false}},{"label":"SSC GD Constable","short":"SSC GD","aliases":["ssc gd"],"subjects":[{"s":"General Intelligence and Reasoning","q":"Which topics are asked in SSC GD General Intelligence and Reasoning?","a":"Analogies, similarities and differences, spatial visualization, spatial orientation, visual memory, discrimination, observation, relationship concepts, arithmetic reasoning, figural classification and non-verbal series."},{"s":"General Knowledge and General Awareness","q":"Which topics are asked in SSC GD General Knowledge and General Awareness?","a":"Current affairs, history, geography, sports, culture, economy, polity, Indian Constitution, scientific research and general knowledge."},{"s":"Elementary Mathematics","q":"Which topics are asked in SSC GD Elementary Mathematics?","a":"Number systems, whole numbers, decimals, fractions, percentages, ratios, averages, interest, profit and loss, discount, mensuration, time and distance, and time and work."},{"s":"English or Hindi","q":"Which topics are asked in SSC GD English or Hindi?","a":"Basic grammar, vocabulary, comprehension, sentence structure, synonyms, antonyms, spelling and language usage in the selected language."}],"weightage":{"rows":[["General Intelligence & Reasoning","20","40"],["General Knowledge & General Awareness","20","40"],["Elementary Mathematics","20","40"],["English/Hindi","20","40"]],"total":["80","160"],"note":"80 questions / 160 marks. Each question carries 2 marks; 0.25 mark is deducted for each incorrect answer under the 2025 pattern.","review":false}},{"label":"SSC CHT / Combined Hindi Translators","short":"SSC CHT","aliases":["ssc cht","hindi translator"],"subjects":[{"s":"General Hindi","q":"Which topics are asked in SSC CHT General Hindi?","a":"Hindi grammar, vocabulary, sentence structure, synonyms, antonyms, idioms, comprehension and correct language usage."},{"s":"General English","q":"Which topics are asked in SSC CHT General English?","a":"English grammar, vocabulary, comprehension, sentence structure, synonyms, antonyms, idioms and correct usage."},{"s":"Translation and Essay","q":"Which topics are asked in SSC CHT Translation and Essay?","a":"Translation between Hindi and English and essay writing, as prescribed for the applicable post and examination cycle."}],"weightage":{"rows":[],"total":null,"note":"Paper I focuses on General Hindi and General English. Check the current SSC Combined Hindi Translators notification for the exact allocation; no separate Reasoning or Quantitative Aptitude weightage is prescribed in the standard pattern.","review":true}}];
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function slugify(s){return String(s).toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9\u0900-\u097f]+/g,'-').replace(/^-+|-+$/g,'');}
+
+function parseDelimited(text,d){
+  var rows=[],row=[],f='',q=false,i,c;
+  text=String(text).replace(/^\uFEFF/,'');
+  for(i=0;i<text.length;i++){
+    c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else if(c==='"'&&f===''){ q=true; }
+    else if(c===d){ row.push(f); f=''; }
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n')i++; row.push(f); rows.push(row); row=[]; f=''; }
+    else f+=c;
+  }
+  if(f!==''||row.length){row.push(f);rows.push(row);}
+  return rows.filter(function(r){return r.some(function(x){return String(x).trim()!=='';});});
+}
+function parseAuto(text){
+  var first=String(text).split(/\r?\n/)[0]||'';
+  return parseDelimited(text, first.indexOf('\t')>-1?'\t':',');
+}
+
+function toQuestions(rows){
+  var errors=[],qs=[];
+  if(!rows||rows.length<2){return {questions:[],errors:['No data rows found. Check that the header row is included.']};}
+  var h=rows[0].map(function(x){return String(x).trim().toLowerCase();});
+  function idx(names){for(var k=0;k<names.length;k++){var p=h.indexOf(names[k]);if(p>-1)return p;}return -1;}
+  var iq=idx(['question','questions']);
+  var io=[1,2,3,4].map(function(n){return idx(['option '+n,'option'+n,'opt '+n,'option '+'abcd'[n-1]]);});
+  var ia=idx(['correct answer','answer','correct option','correct']);
+  var is=idx(['solution','explanation']);
+  var ii=idx(['image url','image']);
+  if(iq<0)errors.push('Column "Question" not found.');
+  if(io[0]<0||io[1]<0)errors.push('Columns "Option 1" … "Option 4" not found.');
+  if(ia<0)errors.push('Column "Correct Answer" not found.');
+  if(is<0)errors.push('Column "Solution" not found.');
+  if(errors.length)return {questions:[],errors:errors};
+  for(var r=1;r<rows.length;r++){
+    var row=rows[r],line=r+1,q=String(row[iq]||'').trim();
+    if(!q){errors.push('Row '+line+': question is empty.');continue;}
+    var opts=io.map(function(p){return p<0?'':String(row[p]||'').trim();});
+    while(opts.length&&opts[opts.length-1]==='')opts.pop();
+    if(opts.length<2||opts.some(function(o){return o==='';})){errors.push('Row '+line+': options missing or have a gap.');continue;}
+    var raw=String(row[ia]||'').trim(),n=-1,m;
+    if(/^[1-9]$/.test(raw))n=+raw;
+    else if(/^[a-d]$/i.test(raw))n='abcd'.indexOf(raw.toLowerCase())+1;
+    else if((m=raw.match(/^option\s*([1-9])$/i)))n=+m[1];
+    else{for(var k=0;k<opts.length;k++){if(opts[k].toLowerCase()===raw.toLowerCase()){n=k+1;break;}}}
+    if(n<1||n>opts.length){errors.push('Row '+line+': Correct Answer "'+raw+'" does not match any option.');continue;}
+    var sol=String(row[is]||'').replace(/\r/g,'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
+    if(!sol.length){errors.push('Row '+line+': solution is empty (page will still be built, but add one for SEO).');}
+    qs.push({q:q,opts:opts,ans:n,sol:sol,img:ii>-1?String(row[ii]||'').trim():''});
+  }
+  return {questions:qs,errors:errors};
+}
+
+
+/* ---------- Language switcher (English default, Hindi on selection) ----------
+   Uses Google's free website translator. The choice is stored in the "googtrans" cookie on the
+   whole domain, so every page that carries this script opens in the chosen language. */
+function gdLangBoot(){
+  if(window.__gdLang)return;window.__gdLang=1;
+  function read(){var m=document.cookie.match(/(?:^|;\s*)googtrans=([^;]*)/);return m?decodeURIComponent(m[1]):'';}
+  function write(v,clear){
+    var h=location.hostname,p=h.split('.');
+    var base='googtrans='+v+'; path=/; SameSite=Lax'+(clear?'; expires=Thu, 01 Jan 1970 00:00:00 GMT':'; max-age=31536000');
+    document.cookie=base;
+    if(p.length>1&&!/^[0-9.]+$/.test(h))document.cookie=base+'; domain=.'+p.slice(-2).join('.');
+  }
+  function cur(){return /\/en\/hi$/.test(read())?'hi':'en';}
+  window.gdSetLang=function(l){if(l==='hi')write('/en/hi',false);else write('/en/en',true);location.reload();};
+  var sels=document.querySelectorAll('.gd-lang');
+  for(var i=0;i<sels.length;i++)sels[i].value=cur();
+  if(cur()==='hi'){
+    var d=document.createElement('div');d.id='gd_gt';
+    d.setAttribute('style','position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden');
+    document.body.appendChild(d);
+    var st=document.createElement('style');
+    st.textContent='.goog-te-banner-frame,.skiptranslate>iframe,#goog-gt-tt{display:none!important}body{top:0!important}';
+    document.head.appendChild(st);
+    window.gdTranslateInit=function(){new google.translate.TranslateElement({pageLanguage:'en',includedLanguages:'en,hi',autoDisplay:false},'gd_gt');};
+    var sc=document.createElement('script');sc.async=true;
+    sc.src='https://translate.google.com/translate_a/element.js?cb=gdTranslateInit';
+    document.head.appendChild(sc);
+  }
+}
+function logoHtml(c){
+  var src=c.logoUrl||LOGO_DEFAULT;
+  return '<a class="gd-logo notranslate" translate="no" href="'+esc(c.base)+'" aria-label="Guidely home"><img src="'+esc(src)+'" alt="Guidely" height="38" onerror="this.onerror=null;this.src=\''+LOGO_FB+'\'"></a>';
+}
+function langSelect(){
+  return '<select class="gd-lang notranslate" translate="no" aria-label="Language" onchange="window.gdSetLang&&window.gdSetLang(this.value)"><option value="en">English</option><option value="hi">&#2361;&#2367;&#2344;&#2381;&#2342;&#2368;</option></select>';
+}
+
+function addUtm(url,medium,slug){
+  if(!url)return '#';
+  return url+(url.indexOf('?')>-1?'&':'?')+'utm_source=trivia&utm_medium='+medium+'&utm_campaign='+encodeURIComponent(slug);
+}
+
+/* ---------- Exam / subject matching and FAQ builders ---------- */
+function normTxt(s){return ' '+String(s).toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim()+' ';}
+function matchExam(text){
+  var t=normTxt(text),best=-1,len=0;
+  FAQ_DATA.forEach(function(e,i){e.aliases.forEach(function(a){var n=normTxt(a);if(t.indexOf(n)>-1&&n.length>len){best=i;len=n.length;}});});
+  return best;
+}
+var STOP={questions:1,question:1,mcq:1,mcqs:1,with:1,and:1,answers:1,answer:1,solutions:1,free:1,pdf:1,solved:1,important:1,trivia:1,quiz:1,practice:1,the:1,of:1,for:1};
+var SYN={maths:'mathematics',math:'mathematics',gk:'awareness',ga:'awareness',gs:'science',quant:'quantitative',english:'english',hindi:'hindi'};
+function matchSubject(ei,name,examText){
+  if(ei<0||!FAQ_DATA[ei])return -1;
+  var e=FAQ_DATA[ei],skip={};
+  normTxt(e.short+' '+e.label+' '+(examText||'')).split(' ').forEach(function(w){if(w)skip[w]=1;});
+  var toks=normTxt(name).split(' ').filter(function(w){return w&&!skip[w]&&!STOP[w];}).map(function(w){return SYN[w]||w;});
+  if(!toks.length)return -1;
+  var best=-1,bestLen=1e9;
+  e.subjects.forEach(function(s,i){
+    var lw=normTxt(s.s).split(' ').filter(Boolean);
+    var ok=toks.every(function(t){return lw.some(function(w){return w.indexOf(t)===0;});});
+    if(ok&&s.s.length<bestLen){best=i;bestLen=s.s.length;}
+  });
+  return best;
+}
+function deriveSubject(c){
+  var s=String(c.name||'');
+  if(c.exam&&s.toLowerCase().indexOf(c.exam.toLowerCase())===0)s=s.slice(c.exam.length);
+  return s.replace(/\bquestions?\b/ig,'').replace(/\s+/g,' ').trim();
+}
+function examLabel(c,ei){return (c.exam||'').trim()||(ei>-1&&FAQ_DATA[ei]?FAQ_DATA[ei].short:'')||c.name;}
+
+function faq1(c,ei,si){
+  if(ei<0||si<0||!FAQ_DATA[ei]||!FAQ_DATA[ei].subjects[si])return null;
+  var s=FAQ_DATA[ei].subjects[si];return {q:s.q,a:s.a};
+}
+function faq2(c,ei){
+  if(ei<0||!FAQ_DATA[ei])return null;
+  var e=FAQ_DATA[ei],w=e.weightage;if(!w)return null;
+  var a='';
+  if(w.rows&&w.rows.length){
+    a='| Subject | Questions | Marks\n'+w.rows.map(function(r){return '| '+r.join(' | ');}).join('\n')+'\n| Total | '+w.total.join(' | ')+'\n'+w.note;
+  } else a=w.note;
+  return {q:'What is the subject-wise weightage in '+e.short+'?',a:a};
+}
+function faq3(c,ei,si){
+  var subj=(ei>-1&&si>-1&&FAQ_DATA[ei]&&FAQ_DATA[ei].subjects[si])?FAQ_DATA[ei].subjects[si].s:deriveSubject(c);
+  return {q:'Can I download these '+c.name+' as a PDF?',
+    a:'Yes. Sign up on Guidely for free and download the solved '+(subj||'practice')+' question PDF.'};
+}
+function faq4(c,ei){
+  var ex=examLabel(c,ei);
+  return {q:'Where can I practise more '+ex+' questions?',
+    a:'Take free '+ex+' mock tests on Guidely and check the related question pages listed at the bottom of this page.'};
+}
+function buildFaqByType(t,c,ei,si){
+  if(t==='1')return faq1(c,ei,si);
+  if(t==='2')return faq2(c,ei);
+  if(t==='3')return faq3(c,ei,si);
+  if(t==='4')return faq4(c,ei);
+  return {q:'',a:''};
+}
+function buildFaqSet(c,ei,si){
+  return [faq1(c,ei,si),faq2(c,ei),faq3(c,ei,si),faq4(c,ei)].filter(Boolean);
+}
+function faqToText(f){
+  var multi=f.a.indexOf('\n')>-1||f.a.charAt(0)==='|';
+  return 'Q: '+f.q+'\nA:'+(multi?'\n':' ')+f.a;
+}
+function faqsToText(list){return list.map(faqToText).join('\n\n');}
+function parseFaqs(t){
+  var out=[],blocks=String(t||'').split(/\n\s*\n/);
+  blocks.forEach(function(b){
+    var q=b.match(/^\s*Q:\s*([\s\S]*?)\n\s*A:\s*([\s\S]*)$/i);
+    if(q){
+      var a=q[2].split('\n').map(function(l){return l.trim();}).filter(Boolean).join('\n');
+      if(a)out.push({q:q[1].trim().replace(/\s+/g,' '),a:a});
+    }
+  });
+  return out;
+}
+function answerHtml(a){
+  var out=[],tbl=[];
+  function flush(){
+    if(!tbl.length)return;
+    var h='<table class="gd-tbl">';
+    tbl.forEach(function(r,i){
+      var tag=i===0?'th':'td';
+      h+='<tr>'+r.replace(/^\|\s*/,'').split('|').map(function(x){return '<'+tag+'>'+esc(x.trim())+'</'+tag+'>';}).join('')+'</tr>';
+    });
+    out.push(h+'</table>');tbl=[];
+  }
+  String(a).split('\n').forEach(function(l){if(l.charAt(0)==='|')tbl.push(l);else{flush();out.push('<p>'+esc(l)+'</p>');}});
+  flush();return out.join('');
+}
+function answerText(a){
+  var parts=[],rows=[],first=true;
+  function flush(){
+    if(!rows.length)return;
+    parts.push(rows.join('; ')+'.');rows=[];
+  }
+  String(a).split('\n').forEach(function(l){
+    if(l.charAt(0)==='|'){
+      if(first){first=false;return;}
+      var c=l.replace(/^\|\s*/,'').split('|').map(function(x){return x.trim();});
+      rows.push(c.length===3?c[0]+': '+c[1]+' questions / '+c[2]+' marks':c.join(' - '));
+    } else {flush();first=true;parts.push(l);}
+  });
+  flush();return parts.join(' ');
+}
+
+function parseLinks(t){
+  return String(t||'').split('\n').map(function(l){var p=l.split('|');return p.length>1?{t:p[0].trim(),u:p.slice(1).join('|').trim()}:null;}).filter(function(x){return x&&x.t&&x.u;});
+}
+function parseLines(t){return String(t||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);}
+function parseFooter(t){
+  var cols=[],cur=null;
+  String(t||'').split('\n').forEach(function(l){
+    l=l.trim();if(!l)return;
+    var h=l.match(/^#+\s*(.+)$/);
+    if(h){cur={title:h[1].trim(),links:[]};cols.push(cur);return;}
+    var p=l.split('|');
+    if(p.length>1&&cur)cur.links.push({t:p[0].trim(),u:p.slice(1).join('|').trim()});
+  });
+  return cols;
+}
+function parseRelated(t){return parseLinks(t);}
+
+/* Auto-filled values for the top bar, side panel and footer (writers can override each field) */
+function autoPanelText(c){
+  var b=c.base.replace(/\/$/,''),ex=(c.exam||'').trim(),sl=ex?slugify(ex):'',
+      mock=c.mockUrl||(sl?b+'/'+sl+'/test-series':b+'/online-test-series'),yr=new Date().getFullYear();
+  var rel=[];
+  if(ex){
+    rel.push(ex+' Previous Year Papers | '+b+'/'+sl+'/previous-year-papers');
+    rel.push(ex+' Syllabus | '+b+'/'+sl+'/syllabus');
+    rel.push(ex+' Mock Test | '+mock);
+    rel.push(ex+' Notification | '+b+'/news/'+sl+'-notification');
+  } else {
+    rel.push('Previous Year Papers | '+b+'/previous-year-papers');
+    rel.push('Mock Tests | '+b+'/online-test-series');
+    rel.push('Practice Questions | '+b+'/practice-questions');
+  }
+  var exams=[];
+  if(ex)exams.push(ex+' | '+(c.examUrl||b+'/'+sl));
+  [['SSC CGL','/ssc-cgl-exam'],['IBPS PO','/ibps-po'],['RRB Group D','/rrb-group-d']].forEach(function(x){
+    if(x[0].toLowerCase()!==ex.toLowerCase())exams.push(x[0]+' | '+b+x[1]);
+  });
+  return {
+    navLinks:'Exams | '+b+'/exams\nTest Series | '+b+'/online-test-series\nPrevious Year Papers | '+b+'/previous-year-papers\nPractice | '+b+'/practice-questions',
+    navCtaLabel:'Get Started', navCtaUrl:b+'/login',
+    sideTitle:ex?'Crack '+ex+' with Guidely':'Crack your exam with Guidely',
+    sideBullets:'Free full-length mock tests\nDetailed solutions & analysis\nTopic-wise practice questions',
+    sideBtnLabel:'Start Free Test', sideBtnUrl:mock,
+    relTitle:'Related Resources', relLinks:rel.join('\n'),
+    footLinks:'## Guidely\nAbout us | '+b+'/about-us\nCareers | '+b+'/careers\nBlog | '+b+'/blog\n## Exams\n'+exams.slice(0,4).join('\n')+
+      '\n## Resources\nTest Series | '+b+'/online-test-series\nPrevious Year Papers | '+b+'/previous-year-papers\nPractice Questions | '+b+'/practice-questions'+
+      '\n## Legal\nTerms | '+b+'/terms-of-service\nPrivacy | '+b+'/privacy-policy',
+    footCopy:'© '+yr+' Guidely. All rights reserved.'
+  };
+}
+function panelsFromText(v,inc){
+  return {showTop:inc.top,showSide:inc.side,showFoot:inc.foot,showLang:inc.lang!==false,
+    navLinks:parseLinks(v.navLinks),navCta:{t:v.navCtaLabel,u:v.navCtaUrl},
+    sideTitle:v.sideTitle,sideBullets:parseLines(v.sideBullets),sideBtn:{t:v.sideBtnLabel,u:v.sideBtnUrl},
+    relTitle:v.relTitle,rel:parseLinks(v.relLinks),footCols:parseFooter(v.footLinks),copy:v.footCopy};
+}
+
+function defaultIntro(c,n){
+  var ex=c.exam||c.name;
+  return c.name+' are an important part of '+ex+' preparation. Below are '+n+' solved questions with the correct answer and a step-by-step explanation, so you learn the concept and not only the answer. Practise them daily and then check your preparation with a free '+ex+' mock test on Guidely.';
+}
+
+function pageMeta(c,n){
+  var slug=c.slug||slugify(c.name);
+  var d=new Date(),mon=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  var my=d.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+  var ex=c.exam||c.name;
+  return {
+    slug:slug,
+    url:c.base.replace(/\/$/,'')+c.prefix.replace(/\/?$/,'/')+slug,
+    h1:c.name+' with Answers & Detailed Solutions [Free PDF]',
+    title:c.name+' [Free PDF] | Guidely',
+    desc:'Practice '+n+' '+c.name+' with answers & solutions (updated '+my+'). Free PDF + free '+ex+' mock test on Guidely.',
+    updated:mon
+  };
+}
+
+function buildSchema(c,qs,meta,faqs){
+  var quiz={'@context':'https://schema.org','@type':'Quiz','name':c.name,'inLanguage':'en-IN','educationalLevel':'Competitive exam',
+    'hasPart':qs.map(function(x,i){
+      return {'@type':'Question','eduQuestionType':'Multiple choice','name':'Question '+(i+1),'text':x.q,
+        'suggestedAnswer':x.opts.map(function(o,k){return {'@type':'Answer','text':o,'position':k+1};}),
+        'acceptedAnswer':{'@type':'Answer','text':x.opts[x.ans-1],'position':x.ans,
+          'answerExplanation':{'@type':'Comment','text':x.sol.join(' ')}}};
+    })};
+  var crumbs=[{'@type':'ListItem','position':1,'name':'Home','item':c.base}];
+  if(c.exam&&c.examUrl)crumbs.push({'@type':'ListItem','position':crumbs.length+1,'name':c.exam,'item':c.examUrl});
+  crumbs.push({'@type':'ListItem','position':crumbs.length+1,'name':c.name});
+  var bc={'@context':'https://schema.org','@type':'BreadcrumbList','itemListElement':crumbs};
+  var parts=[quiz,bc];
+  if(faqs.length)parts.push({'@context':'https://schema.org','@type':'FAQPage','mainEntity':faqs.map(function(f){return {'@type':'Question','name':f.q,'acceptedAnswer':{'@type':'Answer','text':answerText(f.a)}};})});
+  return parts.map(function(o){return '<script type="application/ld+json">\n'+JSON.stringify(o,null,1).replace(/<\//g,'<\\/')+'\n'+CLOSE_SCRIPT;}).join('\n');
+}
+
+var GD_CSS = '.gd{--b:#7b1fa2;--b2:#a21caf;--bd:#4a148c;--soft:#f6eafb;--ink:#1b1b2f;--mut:#5f6275;--line:#e8e6ef;--ok:#0f9d58;--oks:#e7f6ee;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Devanagari",Arial,sans-serif;color:var(--ink);line-height:1.65;max-width:1120px;margin:0 auto;padding:0 12px}'+
+'.gd *{box-sizing:border-box}.gd a{color:var(--b);text-decoration:none}.gd a:hover{text-decoration:underline}'+
+'.gd .gd-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:4px}'+
+'.gd .gd-logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:26px;color:var(--b);letter-spacing:-.5px}.gd .gd-logo:hover{text-decoration:none}.gd .gd-logo img{height:38px;width:auto;display:block}'+
+'.gd .gd-right{display:flex;align-items:center;gap:10px}.gd .gd-lang{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font:600 14px inherit;font-family:inherit;background:#fff;color:var(--ink);cursor:pointer;min-width:96px}'+
+'.gd .gd-links{display:flex;gap:22px;flex-wrap:wrap;font-size:14px;font-weight:600}.gd .gd-links a{color:var(--ink)}'+
+'.gd .gd-btn{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--b2),var(--b));color:#fff!important;padding:9px 18px;border-radius:10px;font-weight:700;font-size:14px;border:0;cursor:pointer;font-family:inherit;line-height:1.3}.gd .gd-btn:hover{text-decoration:none;filter:brightness(1.07)}'+
+'.gd .gd-btn.o{background:#fff;color:var(--b)!important;border:1.5px solid var(--b)}'+
+'.gd .gd-crumbs{font-size:13px;color:var(--mut);padding:10px 0 6px}.gd .gd-crumbs a{color:var(--mut)}.gd .gd-crumbs i{margin:0 6px;font-style:normal}'+
+'.gd .gd-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}.gd .gd-layout.one{grid-template-columns:minmax(0,1fr);max-width:860px;margin:0 auto}'+
+'.gd .gd-bar{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin:6px 0;position:relative}'+
+'.gd details.gd-share{position:relative}.gd details.gd-share summary{list-style:none}.gd details.gd-share summary::-webkit-details-marker{display:none}'+
+'.gd .gd-menu{position:absolute;right:0;top:44px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(60,20,90,.15);padding:8px;min-width:200px;z-index:30}'+
+'.gd .gd-menu a,.gd .gd-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border:0;background:none;border-radius:8px;font:600 14px inherit;font-family:inherit;color:var(--ink);cursor:pointer;text-align:left}.gd .gd-menu a:hover,.gd .gd-menu button:hover{background:var(--soft);text-decoration:none}.gd .gd-menu i{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}'+
+'.gd h1{font-size:30px;line-height:1.25;margin:8px 0}.gd .gd-meta{font-size:13px;color:var(--mut);margin-bottom:14px}'+
+'.gd .gd-box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px}'+
+'.gd .gd-toc{background:var(--soft);border-radius:14px;padding:14px 18px;margin-bottom:18px}.gd .gd-toc b{display:block;color:var(--bd);margin-bottom:4px}.gd .gd-toc ol{margin:0;padding-left:20px;font-size:14px}'+
+'.gd h2{font-size:22px;margin:24px 0 12px}.gd h3{font-size:13px;letter-spacing:.4px;text-transform:uppercase;color:var(--b);margin:0 0 6px}'+
+'.gd .gd-q{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}.gd .gd-q p.t{font-size:17px;font-weight:600;margin:0 0 10px}.gd .gd-q img{max-width:100%;height:auto;margin:0 0 10px;border-radius:8px}'+
+'.gd .gd-q ol{margin:0 0 12px;padding:0;list-style:none;display:grid;gap:8px;counter-reset:o}.gd .gd-q ol li{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:15px;counter-increment:o}.gd .gd-q ol li:before{content:counter(o,upper-alpha) ".  ";font-weight:700;color:var(--mut)}.gd .gd-q ol li.c{border-color:var(--ok);background:var(--oks)}'+
+'.gd .gd-ans{border-top:1px dashed var(--line);padding-top:10px;font-size:15px}.gd .gd-ans b.k{color:var(--ok)}.gd .gd-sol{background:#f7f7fb;border-radius:10px;padding:10px 14px;margin-top:8px}.gd .gd-sol ul{margin:4px 0 0;padding-left:18px}.gd .gd-sol p{margin:4px 0 0}'+
+'.gd .gd-cta{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:linear-gradient(135deg,#4a148c,#a21caf);color:#fff;border-radius:14px;padding:16px 20px;margin:4px 0 14px}.gd .gd-cta strong{font-size:17px}.gd .gd-cta p{margin:2px 0 0;font-size:13px;opacity:.9}.gd .gd-cta .gd-btn{background:#fff;color:var(--b)!important}'+
+'.gd details.gd-faq{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:10px}.gd details.gd-faq summary{cursor:pointer;font-weight:700}.gd details.gd-faq p{margin:8px 0 0}'+
+'.gd .gd-tbl{border-collapse:collapse;width:100%;margin:8px 0 2px;font-size:14px}.gd .gd-tbl th,.gd .gd-tbl td{border:1px solid var(--line);padding:7px 10px;text-align:left}.gd .gd-tbl th{background:var(--soft)}'+
+'.gd .gd-chips{display:flex;flex-wrap:wrap;gap:8px}.gd .gd-chips a{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600}.gd .gd-chips a:hover{background:var(--soft);text-decoration:none}'+
+'.gd .gd-sbox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}.gd .gd-promo{background:linear-gradient(160deg,var(--soft),#fff)}'+
+'.gd .gd-side h2{font-size:17px;margin:0 0 8px}.gd .gd-side ul{margin:0 0 12px;padding-left:18px;font-size:14px}.gd .gd-side li{margin:5px 0}'+
+'.gd .gd-foot{background:#1b1030;color:#cfc8e0;border-radius:14px;padding:26px 24px 16px;margin:28px 0 12px;font-size:14px}.gd .gd-foot a{color:#e7d9ff}'+
+'.gd .gd-fcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px}.gd .gd-foot h4{color:#fff;margin:0 0 8px;font-size:14px}.gd .gd-foot ul{list-style:none;padding:0;margin:0}.gd .gd-foot li{margin:6px 0}'+
+'.gd .gd-copy{border-top:1px solid #3a2a5a;margin-top:18px;padding-top:12px;font-size:13px}'+
+'.gd .gd-mbar{display:none}'+
+'@media(min-width:901px){.gd .gd-sticky{position:sticky;top:16px}}'+
+'@media(max-width:900px){.gd .gd-layout{grid-template-columns:minmax(0,1fr)}}'+
+'@media(max-width:760px){.gd .gd-links{display:none}.gd h1{font-size:23px}.gd .gd-bar{justify-content:flex-start}.gd .gd-foot{margin-bottom:76px}.gd .gd-mbar{display:flex;gap:10px;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 14px;z-index:25}.gd .gd-mbar a{flex:1;justify-content:center}}';
+
+function buildBody(c,qs,meta,intro,faqs,related){
+  var P=c.panels||panelsFromText(autoPanelText(c),{top:true,side:true,foot:true});
+  var slug=meta.slug, enc=encodeURIComponent, u=enc(meta.url), t=enc(meta.title);
+  var pdf=addUtm(c.pdfUrl||c.base+'/login','pdf_download',slug);
+  var mockBase=c.mockUrl||(c.exam?c.base+'/'+slugify(c.exam)+'/test-series':c.base+'/online-test-series');
+  var mock=addUtm(mockBase,'mock_cta',slug);
+  var h=[];
+  h.push('<div class="gd">');
+  h.push('<style>'+GD_CSS+'</style>');
+
+  /* ---- TOP BAR ---- */
+  if(P.showTop){
+    h.push('<div class="gd-top">'+logoHtml(c)+
+      '<div class="gd-links">'+P.navLinks.map(function(l){return '<a href="'+esc(l.u)+'">'+esc(l.t)+'</a>';}).join('')+'</div>'+
+      '<div class="gd-right">'+(P.showLang?langSelect():'')+
+      (P.navCta&&P.navCta.t?'<a class="gd-btn" href="'+esc(addUtm(P.navCta.u||c.base+'/login','header_cta',slug))+'">'+esc(P.navCta.t)+'</a>':'')+'</div></div>');
+  }
+  var bc='<a href="'+esc(c.base)+'">Home</a>';
+  if(c.exam&&c.examUrl)bc+='<i>›</i><a href="'+esc(c.examUrl)+'">'+esc(c.exam)+'</a>';
+  bc+='<i>›</i>'+esc(c.name);
+  h.push('<nav class="gd-crumbs" aria-label="Breadcrumb">'+bc+'</nav>');
+
+  h.push('<div class="gd-layout'+(P.showSide?'':' one')+'"><div class="gd-main">');
+  h.push('<div class="gd-bar">'+(!P.showTop&&P.showLang?langSelect():'')+'<a class="gd-btn o" href="'+esc(pdf)+'" title="Download '+esc(c.name)+' Free PDF">&#8681; Download Free PDF</a>'+
+    '<details class="gd-share"><summary class="gd-btn">Share</summary><div class="gd-menu">'+
+    '<a href="https://wa.me/?text='+t+'%20'+u+'" target="_blank" rel="noopener nofollow"><i style="background:#25d366"></i>WhatsApp</a>'+
+    '<a href="https://t.me/share/url?url='+u+'&text='+t+'" target="_blank" rel="noopener nofollow"><i style="background:#229ed9"></i>Telegram</a>'+
+    '<a href="https://www.facebook.com/sharer/sharer.php?u='+u+'" target="_blank" rel="noopener nofollow"><i style="background:#1877f2"></i>Facebook</a>'+
+    '<a href="https://twitter.com/intent/tweet?url='+u+'&text='+t+'" target="_blank" rel="noopener nofollow"><i style="background:#111"></i>X (Twitter)</a>'+
+    '<a href="https://www.linkedin.com/sharing/share-offsite/?url='+u+'" target="_blank" rel="noopener nofollow"><i style="background:#0a66c2"></i>LinkedIn</a>'+
+    '<button type="button" data-url="'+esc(meta.url)+'" onclick="var b=this,x=b.dataset.url;if(navigator.clipboard){navigator.clipboard.writeText(x);}b.textContent=\'Link copied!\';"><i style="background:#7b1fa2"></i>Copy link</button>'+
+    '</div></details></div>');
+  h.push('<h1>'+esc(meta.h1)+'</h1>');
+  h.push('<div class="gd-meta">Last updated on '+esc(meta.updated)+'</div>');
+  h.push('<div class="gd-box"><p style="margin:0">'+intro+'</p>'+
+    '<div class="gd-bar" style="justify-content:flex-start;margin:12px 0 0"><a class="gd-btn" href="'+esc(pdf)+'">Download Free PDF</a><a class="gd-btn o" href="'+esc(mock)+'">Free '+esc(c.exam||'Mock')+' Mock Test</a></div></div>');
+  var toc='<li><a href="#gd-questions">Important Questions</a></li>';
+  if(faqs.length)toc+='<li><a href="#gd-faq">FAQs</a></li>';
+  if(related.length)toc+='<li><a href="#gd-more">More Important Questions</a></li>';
+  h.push('<nav class="gd-toc" aria-label="Table of contents"><b>On this page</b><ol>'+toc+'</ol></nav>');
+  h.push('<h2 id="gd-questions">Important '+esc(c.name)+'</h2>');
+  var qLabel=String(c.name).replace(/\s*questions?\s*$/i,'').trim()||c.name;
+  qs.forEach(function(x,i){
+    var n=i+1,o=x.opts.map(function(op,k){return '<li'+(k+1===x.ans?' class="c"':'')+'>'+esc(op)+'</li>';}).join('');
+    var sol=x.sol.length>1?'<ul>'+x.sol.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ul>':(x.sol.length?'<p>'+esc(x.sol[0])+'</p>':'');
+    h.push('<section class="gd-q" id="gd-q'+n+'"><h3>'+esc(qLabel+' Question '+n)+'</h3>'+
+      '<p class="t">'+esc(x.q)+'</p>'+(x.img?'<img src="'+esc(x.img)+'" alt="'+esc(qLabel+' Question '+n)+'" loading="lazy">':'')+
+      '<ol>'+o+'</ol><div class="gd-ans"><b class="k">Correct Answer:</b> Option '+x.ans+' &mdash; '+esc(x.opts[x.ans-1])+
+      (sol?'<div class="gd-sol"><b>Solution:</b>'+sol+'</div>':'')+'</div></section>');
+    if(c.ctaEvery&&n%c.ctaEvery===0&&n<qs.length){
+      h.push('<div class="gd-cta"><div><strong>Take a free '+esc(c.exam||'')+' mock test</strong><p>Full-length tests with detailed analysis on Guidely.</p></div><a class="gd-btn" href="'+esc(addUtm(mockBase,'inline_cta',slug))+'">Start Free</a></div>');
+    }
+  });
+  h.push('<div class="gd-cta"><div><strong>Get all these solved questions as a PDF</strong><p>Free sign-up. Practise offline, anytime.</p></div><a class="gd-btn" href="'+esc(addUtm(c.pdfUrl||c.base+'/login','bottom_pdf',slug))+'">Download Free PDF</a></div>');
+  if(faqs.length){
+    h.push('<h2 id="gd-faq">Frequently Asked Questions</h2>');
+    faqs.forEach(function(f,i){h.push('<details class="gd-faq"'+(i===0?' open':'')+'><summary>'+esc(f.q)+'</summary>'+answerHtml(f.a)+'</details>');});
+  }
+  if(related.length){
+    h.push('<h2 id="gd-more">More Important Questions</h2><div class="gd-chips">'+related.map(function(r){return '<a href="'+esc(r.u)+'">'+esc(r.t)+'</a>';}).join('')+'</div>');
+  }
+  h.push('</div>');
+
+  /* ---- RIGHT SIDE PANEL ---- */
+  if(P.showSide){
+    h.push('<div class="gd-side"><div class="gd-sticky">');
+    h.push('<div class="gd-sbox gd-promo"><h2>'+esc(P.sideTitle)+'</h2>'+
+      (P.sideBullets.length?'<ul>'+P.sideBullets.map(function(b){return '<li>'+esc(b)+'</li>';}).join('')+'</ul>':'')+
+      (P.sideBtn&&P.sideBtn.t?'<a class="gd-btn" href="'+esc(addUtm(P.sideBtn.u||mockBase,'sidebar',slug))+'">'+esc(P.sideBtn.t)+'</a>':'')+'</div>');
+    if(P.rel.length){
+      h.push('<div class="gd-sbox"><h2>'+esc(P.relTitle||'Related Resources')+'</h2><ul>'+P.rel.map(function(r){return '<li><a href="'+esc(r.u)+'">'+esc(r.t)+'</a></li>';}).join('')+'</ul></div>');
+    }
+    h.push('</div></div>');
+  }
+  h.push('</div>');
+
+  /* ---- BOTTOM FOOTER ---- */
+  if(P.showFoot){
+    h.push('<div class="gd-foot"><div class="gd-fcols">'+P.footCols.map(function(col){
+      return '<div><h4>'+esc(col.title)+'</h4><ul>'+col.links.map(function(l){return '<li><a href="'+esc(l.u)+'">'+esc(l.t)+'</a></li>';}).join('')+'</ul></div>';
+    }).join('')+'</div>'+(P.copy?'<div class="gd-copy">'+esc(P.copy)+'</div>':'')+'</div>');
+  }
+  if(P.showLang)h.push('<script>('+gdLangBoot.toString()+')();'+CLOSE_SCRIPT);
+  h.push('<div class="gd-mbar"><a class="gd-btn o" href="'+esc(addUtm(c.pdfUrl||c.base+'/login','mobile_bar',slug))+'">Download PDF</a><a class="gd-btn" href="'+esc(mock)+'">Free Mock Test</a></div>');
+  h.push('</div>');
+  return h.join('\n');
+}
+</script>
+
+<!-- ============================ UI ============================ -->
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var data=null,last=null;
+  var SAVE=['base','prefix','ctaEvery','related','examUrl','mockUrl','pdfUrl','exam','logoUrl'];
+  var PANEL_AUTO={top:['navLinks','navCtaLabel','navCtaUrl'],side:['sideTitle','sideBullets','sideBtnLabel','sideBtnUrl','relTitle','relLinks'],foot:['footLinks','footCopy']};
+  var PANEL_ALL=PANEL_AUTO.top.concat(PANEL_AUTO.side,PANEL_AUTO.foot);
+  var PERSIST=['navLinks','navCtaLabel','navCtaUrl','sideBullets','sideBtnLabel','footLinks','footCopy'];
+  var INC=['incTop','incSide','incFoot','incLang'];
+
+  try{SAVE.forEach(function(k){var v=localStorage.getItem('gd_'+k);if(v!==null&&$(k))$(k).value=v;});}catch(e){}
+  try{INC.forEach(function(k){var v=localStorage.getItem('gd_'+k);if(v!==null)$(k).value=v;});}catch(e){}
+
+  /* dropdown 1: exams */
+  FAQ_DATA.forEach(function(e,i){var o=document.createElement('option');o.value=i;o.textContent=e.label;$('faqExam').appendChild(o);});
+  function fillSubj(ei,si){
+    var fs=$('faqSubj');fs.innerHTML='<option value="-1">— Select subject —</option>';
+    if(ei>-1&&FAQ_DATA[ei])FAQ_DATA[ei].subjects.forEach(function(s,i){var o=document.createElement('option');o.value=i;o.textContent=s.s;fs.appendChild(o);});
+    fs.value=String(si>-1?si:-1);
+  }
+
+  document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
+    document.querySelectorAll('.pane').forEach(function(x){x.classList.remove('on');});
+    t.classList.add('on');$(t.dataset.p).classList.add('on');};});
+
+  function setMsg(el,txt,cls){el.textContent=txt;el.className='msg '+(cls||'');}
+  function accept(rows,srcLabel){
+    var r=toQuestions(rows);data=r;
+    var m=$('loadMsg');
+    if(!r.questions.length){setMsg(m,'Could not read questions. '+r.errors.join(' '),'err');return;}
+    setMsg(m,'Loaded '+r.questions.length+' valid questions from '+srcLabel+(r.errors.length?' ('+r.errors.length+' row issue(s), see below after generating).':'.'),'ok');
+  }
+
+  $('loadBtn').onclick=function(){
+    var url=$('sheetUrl').value.trim(),m=$('loadMsg'),id=(url.match(/\/d\/([a-zA-Z0-9-_]+)/)||[])[1],gid=(url.match(/[#&?]gid=(\d+)/)||[])[1]||'0',tab=$('tabName').value.trim();
+    if(!id){setMsg(m,'Invalid Google Sheet link.','err');return;}
+    setMsg(m,'Loading…');
+    var tries=[];
+    if(tab)tries.push('https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(tab));
+    tries.push('https://docs.google.com/spreadsheets/d/'+id+'/export?format=csv&gid='+gid);
+    (function next(i){
+      if(i>=tries.length){setMsg(m,'Browser could not read the sheet (private sheet or blocked). Use the "Paste from sheet" or "Upload CSV" tab instead.','err');return;}
+      fetch(tries[i]).then(function(r){if(!r.ok)throw 0;return r.text();}).then(function(t){
+        if(/^\s*<(!doctype|html)/i.test(t))throw 0;
+        accept(parseAuto(t),'Google Sheet');
+      }).catch(function(){next(i+1);});
+    })(0);
+  };
+  $('pasteBox').addEventListener('input',function(){var v=this.value;if(v.trim())accept(parseAuto(v),'pasted data');});
+  $('fileIn').onchange=function(){
+    var f=this.files[0];if(!f)return;
+    if(/\.xlsx?$/i.test(f.name)){
+      var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload=function(){var rd=new FileReader();rd.onload=function(e){
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        var ws=wb.Sheets['Trivia Questions']||wb.Sheets[wb.SheetNames[0]];
+        accept(parseAuto(XLSX.utils.sheet_to_csv(ws)),f.name);};rd.readAsArrayBuffer(f);};
+      s.onerror=function(){setMsg($('loadMsg'),'Could not load the Excel reader. Save as CSV and upload again.','err');};
+      document.head.appendChild(s);
+    } else {var rd=new FileReader();rd.onload=function(e){accept(parseAuto(e.target.result),f.name);};rd.readAsText(f,'utf-8');}
+  };
+
+  function cfg(){
+    var g=function(id){return $(id).value.trim();};
+    return {name:g('name'),exam:g('exam'),examUrl:g('examUrl'),mockUrl:g('mockUrl'),pdfUrl:g('pdfUrl'),logoUrl:g('logoUrl'),
+      base:g('base').replace(/\/$/,'')||'https://guidely.in',prefix:g('prefix')||'/questions/',
+      ctaEvery:parseInt($('ctaEvery').value,10)||0};
+  }
+
+  /* ---------- panels: auto values, edit tracking, reset ---------- */
+  function applyAuto(group,force){
+    var vals=autoPanelText(cfg());
+    (group?PANEL_AUTO[group]:PANEL_ALL).forEach(function(id){
+      var el=$(id);
+      if(force||el.dataset.edited!=='1')el.value=vals[id];
+    });
+  }
+  try{PERSIST.forEach(function(id){var v=localStorage.getItem('gd_p_'+id);if(v!==null){$(id).value=v;$(id).dataset.edited='1';}});}catch(e){}
+  PANEL_ALL.forEach(function(id){
+    $(id).addEventListener('input',function(){
+      this.dataset.edited='1';
+      if(PERSIST.indexOf(id)>-1){try{localStorage.setItem('gd_p_'+id,this.value);}catch(e){}}
+    });
+  });
+  document.querySelectorAll('[data-reset]').forEach(function(b){b.onclick=function(){
+    var g=b.dataset.reset;
+    PANEL_AUTO[g].forEach(function(id){$(id).dataset.edited='';try{localStorage.removeItem('gd_p_'+id);}catch(e){}});
+    applyAuto(g,true);
+  };});
+  INC.forEach(function(id){$(id).addEventListener('change',function(){try{localStorage.setItem('gd_'+id,this.value);}catch(e){}});});
+
+  /* ---------- FAQ dropdowns ---------- */
+  function sel(){return {ei:parseInt($('faqExam').value,10),si:parseInt($('faqSubj').value,10)};}
+  function faqHint(){
+    var s=sel(),m=$('faqHint'),c=cfg(),txt='',cls='';
+    if(s.ei<0){txt='No exam matched "'+(c.exam||c.name||'')+'". Pick one from the dropdown, or the FAQ list will only have FAQ 3 and FAQ 4.';cls='warn';}
+    else{
+      txt='Exam: '+FAQ_DATA[s.ei].label+(s.si>-1?' | Subject: '+FAQ_DATA[s.ei].subjects[s.si].s:' | Pick a subject for FAQ 1.');
+      cls='ok';
+      var w=FAQ_DATA[s.ei].weightage;
+      if(w&&w.review){txt+=' | FAQ 2: the PDF has no fixed table for this exam, so a general note is used. Please verify it.';cls='warn';}
+    }
+    if($('faqs').dataset.edited==='1')txt+=' | FAQ list was edited by hand, so dropdown changes will not overwrite it. Use "Fill all 4 FAQs" to reload.';
+    setMsg(m,txt,cls);
+  }
+  function syncFaqs(force){
+    var s=sel(),f=$('faqs');
+    if(force||f.dataset.edited!=='1'){f.value=faqsToText(buildFaqSet(cfg(),s.ei,s.si));if(force)f.dataset.edited='';}
+    faqHint();
+  }
+  function autoPick(){
+    var c=cfg(),fe=$('faqExam'),fs=$('faqSubj');
+    if(fe.dataset.manual!=='1'){
+      var ei=matchExam(c.exam||c.name);
+      fe.value=String(ei);
+      fillSubj(ei,-1);
+    }
+    var ei2=parseInt(fe.value,10);
+    if(fs.dataset.manual!=='1'){
+      var si=matchSubject(ei2,c.name,c.exam);
+      fillSubj(ei2,si);
+    }
+    syncFaqs(false);
+  }
+  $('faqExam').addEventListener('change',function(){
+    this.dataset.manual='1';$('faqSubj').dataset.manual='';
+    var ei=parseInt(this.value,10),c=cfg();
+    fillSubj(ei,matchSubject(ei,c.name,c.exam));
+    syncFaqs(false);
+  });
+  $('faqSubj').addEventListener('change',function(){this.dataset.manual='1';syncFaqs(false);});
+  $('faqs').addEventListener('input',function(){this.dataset.edited='1';faqHint();});
+  $('faqFill').onclick=function(){syncFaqs(true);};
+  $('faqAdd').onclick=function(){
+    var t=$('faqType').value,s=sel(),f=buildFaqByType(t,cfg(),s.ei,s.si),m=$('faqHint');
+    if(!f){setMsg(m,t==='1'?'Select an exam and subject first to add FAQ 1.':'Select an exam first to add this FAQ.','err');return;}
+    var cur=$('faqs').value.trim();
+    if(f.q&&cur.indexOf('Q: '+f.q)>-1){setMsg(m,'That FAQ is already in the list.','warn');return;}
+    $('faqs').value=(cur?cur+'\n\n':'')+faqToText(f);
+    $('faqs').dataset.edited='1';
+    setMsg(m,'FAQ added at the end of the list.','ok');
+  };
+
+  /* Exam name / trivia name drive everything automatically */
+  ['exam','name','base','mockUrl','examUrl'].forEach(function(id){
+    $(id).addEventListener('input',function(){applyAuto(null,false);if(id==='exam'||id==='name')autoPick();});
+  });
+  $('intro').addEventListener('input',function(){this.dataset.edited='1';});
+
+  function currentPanels(){
+    var v={};PANEL_ALL.forEach(function(id){v[id]=$(id).value;});
+    return panelsFromText(v,{top:$('incTop').value==='1',side:$('incSide').value==='1',foot:$('incFoot').value==='1',lang:$('incLang').value==='1'});
+  }
+
+  applyAuto(null,false);autoPick();
+
+  $('genBtn').onclick=function(){
+    var gm=$('genMsg');
+    var c=cfg();
+    if(!c.name){setMsg(gm,'Please enter Trivia Name.','err');return;}
+    if(!data||!data.questions.length){setMsg(gm,'Please load questions first (step 2).','err');return;}
+    try{SAVE.forEach(function(k){localStorage.setItem('gd_'+k,$(k).value);});}catch(e){}
+    c.panels=currentPanels();
+    var qs=data.questions,n=qs.length,meta=pageMeta(c,n);
+    if($('intro').dataset.edited!=='1'){$('intro').value=defaultIntro(c,n);}
+    syncFaqs(false);
+    var intro=esc($('intro').value.trim());
+    intro=intro.split(esc(c.name)).join('<strong>'+esc(c.name)+'</strong>');
+    var faqs=parseFaqs($('faqs').value),related=parseRelated($('related').value);
+    var body=buildBody(c,qs,meta,intro,faqs,related),schema=buildSchema(c,qs,meta,faqs);
+    last={c:c,meta:meta,body:body,schema:schema};
+    $('bodyOut').value=body;$('schemaOut').value=schema;
+
+    var f=[['Page Title (SEO title)',meta.title,60],['Meta Description',meta.desc,160],['URL Slug',meta.slug],['Canonical URL',meta.url],['H1 (already inside body HTML)',meta.h1]];
+    $('seoFields').innerHTML=f.map(function(x,i){
+      var over=x[2]&&x[1].length>x[2];
+      return '<div class="field"><div class="top"><b>'+esc(x[0])+(x[2]?' <span class="cnt'+(over?' over':'')+'">'+x[1].length+'/'+x[2]+(over?' (too long, shorten)':'')+'</span>':'')+'</b><button class="btn sm" type="button" data-val="'+i+'">Copy</button></div><div class="val">'+esc(x[1])+'</div></div>';
+    }).join('');
+    $('seoFields').querySelectorAll('button[data-val]').forEach(function(b){b.onclick=function(){copy(f[+b.dataset.val][1],b);};});
+
+    var issues='';
+    if(data.errors.length)issues='<ul class="issues">'+data.errors.map(function(e){return '<li>'+esc(e)+'</li>';}).join('')+'</ul>';
+    gm.className='msg '+(data.errors.length?'warn':'ok');
+    gm.innerHTML='Generated page with '+n+' questions and '+faqs.length+' FAQs.'+(data.errors.length?' '+data.errors.length+' row(s) skipped or flagged:':'')+issues;
+
+    $('preview').srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#faf9fc}</style></head><body>'+body+'</body></html>';
+    $('results').style.display='block';
+    $('results').scrollIntoView({behavior:'smooth'});
+  };
+
+  function copy(text,btn){
+    var done=function(){var o=btn.textContent;btn.textContent='Copied!';setTimeout(function(){btn.textContent=o;},1400);};
+    if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,fb);}else fb();
+    function fb(){var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();done();}
+  }
+  document.querySelectorAll('[data-copy]').forEach(function(b){b.onclick=function(){copy($(b.dataset.copy).value,b);};});
+  $('copyAll').onclick=function(){if(last)copy(last.body+'\n'+last.schema,this);};
+  $('dlFull').onclick=function(){
+    if(!last)return;var m=last.meta;
+    var html='<!DOCTYPE html>\n<html lang="en-IN">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>'+esc(m.title)+'</title>\n<meta name="description" content="'+esc(m.desc)+'">\n<link rel="canonical" href="'+esc(m.url)+'">\n<meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large">\n<meta property="og:type" content="article">\n<meta property="og:site_name" content="Guidely">\n<meta property="og:title" content="'+esc(m.title)+'">\n<meta property="og:description" content="'+esc(m.desc)+'">\n<meta property="og:url" content="'+esc(m.url)+'">\n'+last.schema+'\n</head>\n<body>\n'+last.body+'\n</body>\n</html>';
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download=m.slug+'.html';a.click();
+  };
+})();
+</script>
+</body>
+</html>
