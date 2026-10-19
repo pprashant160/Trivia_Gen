@@ -47,6 +47,7 @@ details.panel>summary{cursor:pointer;font-weight:700;font-size:15px;color:var(--
 details.panel>summary span{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
 details.panel .grid{margin-top:12px}
 ul.issues{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--bad)}
+.manual{border:1.5px dashed var(--brand);border-radius:12px;padding:14px;background:#fcfbfe}
 .pill{display:inline-block;font-size:11px;font-weight:700;background:var(--soft);color:var(--brand);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:middle}
 </style>
 </head>
@@ -119,6 +120,16 @@ ul.issues{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--bad)}
         <select id="faqExam"><option value="-1">— Select exam —</option></select></div>
       <div><label>FAQ Subject <span>(dropdown 2: auto-picked from Trivia Name, you can change it)</span></label>
         <select id="faqSubj"><option value="-1">— Select subject —</option></select></div>
+      <div class="full manual" id="faqManual" style="display:none">
+        <div class="grid">
+          <div class="full"><b style="font-size:13px;color:var(--brand)">Manual FAQ details</b> <span class="hint">(used because "Other" is selected; fill what you have, FAQ 3 and 4 are always automatic)</span></div>
+          <div id="manExamWrap"><label>Exam name</label><input type="text" id="manExam" placeholder="IBPS PO"></div>
+          <div><label>Subject name</label><input type="text" id="manSubj" placeholder="Reasoning"></div>
+          <div class="full"><label>FAQ 1 answer: topics asked in this subject</label><textarea id="manTopics" style="min-height:70px" placeholder="Analogies, series, coding-decoding, blood relations, direction sense, syllogism..."></textarea></div>
+          <div class="full" id="manWeightWrap"><label>FAQ 2: subject-wise weightage <span>(one per line: Subject | Questions | Marks. Total is added automatically)</span></label><textarea id="manWeight" style="min-height:90px" placeholder="Reasoning | 35 | 35&#10;Quantitative Aptitude | 35 | 35&#10;English | 30 | 30"></textarea></div>
+          <div class="full" id="manNoteWrap"><label>FAQ 2 note <span>(optional, e.g. marking scheme)</span></label><input type="text" id="manNote" placeholder="Each question carries 1 mark; 0.25 mark is deducted for each incorrect answer."></div>
+        </div>
+      </div>
       <div class="full">
         <div class="row">
           <select id="faqType" aria-label="FAQ type to add">
@@ -343,44 +354,77 @@ function matchSubject(ei,name,examText){
   return best;
 }
 function deriveSubject(c){
-  var s=String(c.name||'');
-  if(c.exam&&s.toLowerCase().indexOf(c.exam.toLowerCase())===0)s=s.slice(c.exam.length);
+  var s=String(c.name||'').trim(),ei=matchExam(c.exam||c.name),cands=[c.exam];
+  if(ei>-1){cands.push(FAQ_DATA[ei].short,FAQ_DATA[ei].label);}
+  for(var i=0;i<cands.length;i++){
+    var x=String(cands[i]||'');
+    if(x&&s.toLowerCase().indexOf(x.toLowerCase())===0){s=s.slice(x.length);break;}
+  }
   return s.replace(/\bquestions?\b/ig,'').replace(/\s+/g,' ').trim();
 }
-function examLabel(c,ei){return (c.exam||'').trim()||(ei>-1&&FAQ_DATA[ei]?FAQ_DATA[ei].short:'')||c.name;}
+function examLabel(c,ei,man){
+  if(ei===-2&&man&&String(man.exam||'').trim())return man.exam.trim();
+  return (c.exam||'').trim()||(ei>-1&&FAQ_DATA[ei]?FAQ_DATA[ei].short:'')||c.name;
+}
+function parseWeight(t){
+  var rows=[];
+  String(t||'').split('\n').forEach(function(l){
+    var p=l.split('|').map(function(x){return x.trim();});
+    if(p.length>=2&&p[0]&&/^\d+(\.\d+)?$/.test(p[1])){rows.push([p[0],p[1],/^\d+(\.\d+)?$/.test(p[2]||'')?p[2]:p[1]]);}
+  });
+  return rows;
+}
 
-function faq1(c,ei,si){
+function faq1(c,ei,si,man){
+  if((ei===-2||si===-2)&&man&&String(man.topics||'').trim()){
+    var ex=ei===-2?examLabel(c,ei,man):((ei>-1&&FAQ_DATA[ei])?FAQ_DATA[ei].short:examLabel(c,ei,man));
+    var sj=String(man.subj||'').trim()||deriveSubject(c);
+    return {q:'Which topics are asked in '+ex+(sj?' '+sj:'')+'?',a:String(man.topics).trim().replace(/\s*\n\s*/g,' ')};
+  }
   if(ei<0||si<0||!FAQ_DATA[ei]||!FAQ_DATA[ei].subjects[si])return null;
   var s=FAQ_DATA[ei].subjects[si];return {q:s.q,a:s.a};
 }
-function faq2(c,ei){
+function faq2(c,ei,man){
+  if(ei===-2){
+    var rows=parseWeight(man&&man.weight),note=String((man&&man.note)||'').trim();
+    if(!rows.length&&!note)return null;
+    var a='';
+    if(rows.length){
+      var tq=0,tm=0;rows.forEach(function(r){tq+=parseFloat(r[1]);tm+=parseFloat(r[2]);});
+      a='| Subject | Questions | Marks\n'+rows.map(function(r){return '| '+r.join(' | ');}).join('\n')+'\n| Total | '+tq+' | '+tm+(note?'\n'+note:'');
+    } else a=note;
+    return {q:'What is the subject-wise weightage in '+examLabel(c,ei,man)+'?',a:a};
+  }
   if(ei<0||!FAQ_DATA[ei])return null;
   var e=FAQ_DATA[ei],w=e.weightage;if(!w)return null;
-  var a='';
+  var b='';
   if(w.rows&&w.rows.length){
-    a='| Subject | Questions | Marks\n'+w.rows.map(function(r){return '| '+r.join(' | ');}).join('\n')+'\n| Total | '+w.total.join(' | ')+'\n'+w.note;
-  } else a=w.note;
-  return {q:'What is the subject-wise weightage in '+e.short+'?',a:a};
+    b='| Subject | Questions | Marks\n'+w.rows.map(function(r){return '| '+r.join(' | ');}).join('\n')+'\n| Total | '+w.total.join(' | ')+'\n'+w.note;
+  } else b=w.note;
+  return {q:'What is the subject-wise weightage in '+e.short+'?',a:b};
 }
-function faq3(c,ei,si){
-  var subj=(ei>-1&&si>-1&&FAQ_DATA[ei]&&FAQ_DATA[ei].subjects[si])?FAQ_DATA[ei].subjects[si].s:deriveSubject(c);
+function faq3(c,ei,si,man){
+  var subj;
+  if((ei===-2||si===-2)&&man&&String(man.subj||'').trim())subj=man.subj.trim();
+  else if(ei>-1&&si>-1&&FAQ_DATA[ei]&&FAQ_DATA[ei].subjects[si])subj=FAQ_DATA[ei].subjects[si].s;
+  else subj=deriveSubject(c);
   return {q:'Can I download these '+c.name+' as a PDF?',
     a:'Yes. Sign up on Guidely for free and download the solved '+(subj||'practice')+' question PDF.'};
 }
-function faq4(c,ei){
-  var ex=examLabel(c,ei);
+function faq4(c,ei,man){
+  var ex=examLabel(c,ei,man);
   return {q:'Where can I practise more '+ex+' questions?',
     a:'Take free '+ex+' mock tests on Guidely and check the related question pages listed at the bottom of this page.'};
 }
-function buildFaqByType(t,c,ei,si){
-  if(t==='1')return faq1(c,ei,si);
-  if(t==='2')return faq2(c,ei);
-  if(t==='3')return faq3(c,ei,si);
-  if(t==='4')return faq4(c,ei);
+function buildFaqByType(t,c,ei,si,man){
+  if(t==='1')return faq1(c,ei,si,man);
+  if(t==='2')return faq2(c,ei,man);
+  if(t==='3')return faq3(c,ei,si,man);
+  if(t==='4')return faq4(c,ei,man);
   return {q:'',a:''};
 }
-function buildFaqSet(c,ei,si){
-  return [faq1(c,ei,si),faq2(c,ei),faq3(c,ei,si),faq4(c,ei)].filter(Boolean);
+function buildFaqSet(c,ei,si,man){
+  return [faq1(c,ei,si,man),faq2(c,ei,man),faq3(c,ei,si,man),faq4(c,ei,man)].filter(Boolean);
 }
 function faqToText(f){
   var multi=f.a.indexOf('\n')>-1||f.a.charAt(0)==='|';
@@ -522,7 +566,7 @@ function buildSchema(c,qs,meta,faqs){
   return parts.map(function(o){return '<script type="application/ld+json">\n'+JSON.stringify(o,null,1).replace(/<\//g,'<\\/')+'\n'+CLOSE_SCRIPT;}).join('\n');
 }
 
-var GD_CSS = '.gd{--b:#7b1fa2;--b2:#a21caf;--bd:#4a148c;--soft:#f6eafb;--ink:#1b1b2f;--mut:#5f6275;--line:#e8e6ef;--ok:#0f9d58;--oks:#e7f6ee;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Devanagari",Arial,sans-serif;color:var(--ink);line-height:1.65;max-width:1120px;margin:0 auto;padding:0 12px}'+
+var GD_CSS = 'html{scroll-behavior:smooth}.gd{--b:#7b1fa2;--b2:#a21caf;--bd:#4a148c;--soft:#f6eafb;--ink:#1b1b2f;--mut:#5f6275;--line:#e8e6ef;--ok:#0f9d58;--oks:#e7f6ee;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Devanagari",Arial,sans-serif;color:var(--ink);line-height:1.65;max-width:1120px;margin:0 auto;padding:0 12px}'+
 '.gd *{box-sizing:border-box}.gd a{color:var(--b);text-decoration:none}.gd a:hover{text-decoration:underline}'+
 '.gd .gd-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:4px}'+
 '.gd .gd-logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:26px;color:var(--b);letter-spacing:-.5px}.gd .gd-logo:hover{text-decoration:none}.gd .gd-logo img{height:38px;width:auto;display:block}'+
@@ -538,7 +582,7 @@ var GD_CSS = '.gd{--b:#7b1fa2;--b2:#a21caf;--bd:#4a148c;--soft:#f6eafb;--ink:#1b
 '.gd .gd-menu a,.gd .gd-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border:0;background:none;border-radius:8px;font:600 14px inherit;font-family:inherit;color:var(--ink);cursor:pointer;text-align:left}.gd .gd-menu a:hover,.gd .gd-menu button:hover{background:var(--soft);text-decoration:none}.gd .gd-menu i{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}'+
 '.gd h1{font-size:30px;line-height:1.25;margin:8px 0}.gd .gd-meta{font-size:13px;color:var(--mut);margin-bottom:14px}'+
 '.gd .gd-box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px}'+
-'.gd .gd-toc{background:var(--soft);border-radius:14px;padding:14px 18px;margin-bottom:18px}.gd .gd-toc b{display:block;color:var(--bd);margin-bottom:4px}.gd .gd-toc ol{margin:0;padding-left:20px;font-size:14px}'+
+'.gd .gd-toc{background:var(--soft);border-radius:14px;padding:18px 22px;margin-bottom:18px}.gd .gd-toc b{display:block;color:var(--bd);font-size:18px;margin-bottom:8px}.gd .gd-toc ol{margin:0;padding-left:26px;font-size:16px;line-height:1.9;columns:2;column-gap:40px}.gd .gd-toc li{break-inside:avoid}.gd [id]{scroll-margin-top:80px}'+
 '.gd h2{font-size:22px;margin:24px 0 12px}.gd h3{font-size:13px;letter-spacing:.4px;text-transform:uppercase;color:var(--b);margin:0 0 6px}'+
 '.gd .gd-q{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}.gd .gd-q p.t{font-size:17px;font-weight:600;margin:0 0 10px}.gd .gd-q img{max-width:100%;height:auto;margin:0 0 10px;border-radius:8px}'+
 '.gd .gd-q ol{margin:0 0 12px;padding:0;list-style:none;display:grid;gap:8px;counter-reset:o}.gd .gd-q ol li{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:15px;counter-increment:o}.gd .gd-q ol li:before{content:counter(o,upper-alpha) ".  ";font-weight:700;color:var(--mut)}.gd .gd-q ol li.c{border-color:var(--ok);background:var(--oks)}'+
@@ -555,7 +599,7 @@ var GD_CSS = '.gd{--b:#7b1fa2;--b2:#a21caf;--bd:#4a148c;--soft:#f6eafb;--ink:#1b
 '.gd .gd-mbar{display:none}'+
 '@media(min-width:901px){.gd .gd-sticky{position:sticky;top:16px}}'+
 '@media(max-width:900px){.gd .gd-layout{grid-template-columns:minmax(0,1fr)}}'+
-'@media(max-width:760px){.gd .gd-links{display:none}.gd h1{font-size:23px}.gd .gd-bar{justify-content:flex-start}.gd .gd-foot{margin-bottom:76px}.gd .gd-mbar{display:flex;gap:10px;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 14px;z-index:25}.gd .gd-mbar a{flex:1;justify-content:center}}';
+'@media(max-width:760px){.gd .gd-toc ol{columns:1}.gd .gd-links{display:none}.gd h1{font-size:23px}.gd .gd-bar{justify-content:flex-start}.gd .gd-foot{margin-bottom:76px}.gd .gd-mbar{display:flex;gap:10px;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 14px;z-index:25}.gd .gd-mbar a{flex:1;justify-content:center}}';
 
 function buildBody(c,qs,meta,intro,faqs,related){
   var P=c.panels||panelsFromText(autoPanelText(c),{top:true,side:true,foot:true});
@@ -593,9 +637,14 @@ function buildBody(c,qs,meta,intro,faqs,related){
   h.push('<div class="gd-meta">Last updated on '+esc(meta.updated)+'</div>');
   h.push('<div class="gd-box"><p style="margin:0">'+intro+'</p>'+
     '<div class="gd-bar" style="justify-content:flex-start;margin:12px 0 0"><a class="gd-btn" href="'+esc(pdf)+'">Download Free PDF</a><a class="gd-btn o" href="'+esc(mock)+'">Free '+esc(c.exam||'Mock')+' Mock Test</a></div></div>');
-  var toc='<li><a href="#gd-questions">Important Questions</a></li>';
-  if(faqs.length)toc+='<li><a href="#gd-faq">FAQs</a></li>';
-  if(related.length)toc+='<li><a href="#gd-more">More Important Questions</a></li>';
+  var subjT=deriveSubject(c),wIdx=-1;
+  faqs.forEach(function(f,i){if(wIdx<0&&/subject-wise weightage/i.test(f.q))wIdx=i;});
+  var toc='<li><a href="#gd-questions">Important '+(subjT?esc(subjT)+' ':'')+'Questions</a></li>';
+  if(faqs.length){
+    toc+='<li><a href="#'+(wIdx>-1?'gd-faq-weightage':'gd-faq')+'">Exam Pattern &amp; Topics</a></li>';
+    toc+='<li><a href="#gd-faq">FAQs</a></li>';
+  }
+  if(related.length)toc+='<li><a href="#gd-more">Study Materials</a></li>';
   h.push('<nav class="gd-toc" aria-label="Table of contents"><b>On this page</b><ol>'+toc+'</ol></nav>');
   h.push('<h2 id="gd-questions">Important '+esc(c.name)+'</h2>');
   var qLabel=String(c.name).replace(/\s*questions?\s*$/i,'').trim()||c.name;
@@ -613,7 +662,7 @@ function buildBody(c,qs,meta,intro,faqs,related){
   h.push('<div class="gd-cta"><div><strong>Get all these solved questions as a PDF</strong><p>Free sign-up. Practise offline, anytime.</p></div><a class="gd-btn" href="'+esc(addUtm(c.pdfUrl||c.base+'/login','bottom_pdf',slug))+'">Download Free PDF</a></div>');
   if(faqs.length){
     h.push('<h2 id="gd-faq">Frequently Asked Questions</h2>');
-    faqs.forEach(function(f,i){h.push('<details class="gd-faq"'+(i===0?' open':'')+'><summary>'+esc(f.q)+'</summary>'+answerHtml(f.a)+'</details>');});
+    faqs.forEach(function(f,i){h.push('<details class="gd-faq"'+(i===wIdx?' id="gd-faq-weightage"':'')+((i===0||i===wIdx)?' open':'')+'><summary>'+esc(f.q)+'</summary>'+answerHtml(f.a)+'</details>');});
   }
   if(related.length){
     h.push('<h2 id="gd-more">More Important Questions</h2><div class="gd-chips">'+related.map(function(r){return '<a href="'+esc(r.u)+'">'+esc(r.t)+'</a>';}).join('')+'</div>');
@@ -660,12 +709,14 @@ function buildBody(c,qs,meta,intro,faqs,related){
   try{SAVE.forEach(function(k){var v=localStorage.getItem('gd_'+k);if(v!==null&&$(k))$(k).value=v;});}catch(e){}
   try{INC.forEach(function(k){var v=localStorage.getItem('gd_'+k);if(v!==null)$(k).value=v;});}catch(e){}
 
-  /* dropdown 1: exams */
+  /* dropdown 1: exams (+ Other) */
   FAQ_DATA.forEach(function(e,i){var o=document.createElement('option');o.value=i;o.textContent=e.label;$('faqExam').appendChild(o);});
+  (function(){var o=document.createElement('option');o.value='other';o.textContent='Other (add manually)';$('faqExam').appendChild(o);})();
   function fillSubj(ei,si){
     var fs=$('faqSubj');fs.innerHTML='<option value="-1">— Select subject —</option>';
     if(ei>-1&&FAQ_DATA[ei])FAQ_DATA[ei].subjects.forEach(function(s,i){var o=document.createElement('option');o.value=i;o.textContent=s.s;fs.appendChild(o);});
-    fs.value=String(si>-1?si:-1);
+    if(ei>-1||ei===-2){var o2=document.createElement('option');o2.value='other';o2.textContent='Other (add manually)';fs.appendChild(o2);}
+    fs.value=ei===-2?'other':(si===-2?'other':String(si>-1?si:-1));
   }
 
   document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
@@ -740,12 +791,36 @@ function buildBody(c,qs,meta,intro,faqs,related){
   INC.forEach(function(id){$(id).addEventListener('change',function(){try{localStorage.setItem('gd_'+id,this.value);}catch(e){}});});
 
   /* ---------- FAQ dropdowns ---------- */
-  function sel(){return {ei:parseInt($('faqExam').value,10),si:parseInt($('faqSubj').value,10)};}
+  function num(v){return v==='other'?-2:parseInt(v,10);}
+  function sel(){return {ei:num($('faqExam').value),si:num($('faqSubj').value)};}
+  function man(){return {exam:$('manExam').value,subj:$('manSubj').value,topics:$('manTopics').value,weight:$('manWeight').value,note:$('manNote').value};}
+  function curSet(){var s=sel();return buildFaqSet(cfg(),s.ei,s.si,man());}
+  function updateManual(){
+    var s=sel(),show=(s.ei===-2||s.si===-2),c=cfg();
+    $('faqManual').style.display=show?'':'none';
+    $('manExamWrap').style.display=s.ei===-2?'':'none';
+    $('manWeightWrap').style.display=s.ei===-2?'':'none';
+    $('manNoteWrap').style.display=s.ei===-2?'':'none';
+    if(show){
+      if($('manExam').dataset.edited!=='1')$('manExam').value=c.exam||'';
+      if($('manSubj').dataset.edited!=='1')$('manSubj').value=deriveSubject(c);
+    }
+  }
   function faqHint(){
     var s=sel(),m=$('faqHint'),c=cfg(),txt='',cls='';
-    if(s.ei<0){txt='No exam matched "'+(c.exam||c.name||'')+'". Pick one from the dropdown, or the FAQ list will only have FAQ 3 and FAQ 4.';cls='warn';}
-    else{
-      txt='Exam: '+FAQ_DATA[s.ei].label+(s.si>-1?' | Subject: '+FAQ_DATA[s.ei].subjects[s.si].s:' | Pick a subject for FAQ 1.');
+    if(s.ei===-1){txt='Pick an exam from dropdown 1, or choose "Other (add manually)". Until then only FAQ 3 and FAQ 4 are created.';cls='warn';}
+    else if(s.ei===-2){
+      var mm=man(),have=[];
+      txt='Manual mode: '+(c.exam||c.name||'')+' is not in the PDF list. ';
+      if(!mm.topics.trim())have.push('FAQ 1 (topics)');
+      if(!parseWeight(mm.weight).length&&!mm.note.trim())have.push('FAQ 2 (weightage)');
+      txt+=have.length?'Fill the details below to create '+have.join(' and ')+'.':'FAQ 1 to 4 are ready.';
+      cls=have.length?'warn':'ok';
+    } else {
+      txt='Exam: '+FAQ_DATA[s.ei].label;
+      if(s.si>-1)txt+=' | Subject: '+FAQ_DATA[s.ei].subjects[s.si].s;
+      else if(s.si===-2)txt+=' | Subject: manual'+(man().topics.trim()?'':' (fill the topics below for FAQ 1)');
+      else txt+=' | Pick a subject for FAQ 1, or choose Other.';
       cls='ok';
       var w=FAQ_DATA[s.ei].weightage;
       if(w&&w.review){txt+=' | FAQ 2: the PDF has no fixed table for this exam, so a general note is used. Please verify it.';cls='warn';}
@@ -754,36 +829,40 @@ function buildBody(c,qs,meta,intro,faqs,related){
     setMsg(m,txt,cls);
   }
   function syncFaqs(force){
-    var s=sel(),f=$('faqs');
-    if(force||f.dataset.edited!=='1'){f.value=faqsToText(buildFaqSet(cfg(),s.ei,s.si));if(force)f.dataset.edited='';}
+    var f=$('faqs');
+    updateManual();
+    if(force||f.dataset.edited!=='1'){f.value=faqsToText(curSet());if(force)f.dataset.edited='';}
     faqHint();
   }
   function autoPick(){
     var c=cfg(),fe=$('faqExam'),fs=$('faqSubj');
     if(fe.dataset.manual!=='1'){
       var ei=matchExam(c.exam||c.name);
-      fe.value=String(ei);
+      if(ei<0&&c.exam)ei=-2;
+      fe.value=ei===-2?'other':String(ei);
       fillSubj(ei,-1);
     }
-    var ei2=parseInt(fe.value,10);
-    if(fs.dataset.manual!=='1'){
-      var si=matchSubject(ei2,c.name,c.exam);
-      fillSubj(ei2,si);
+    var ei2=num(fe.value);
+    if(fs.dataset.manual!=='1'&&ei2>-1){
+      fillSubj(ei2,matchSubject(ei2,c.name,c.exam));
     }
     syncFaqs(false);
   }
   $('faqExam').addEventListener('change',function(){
     this.dataset.manual='1';$('faqSubj').dataset.manual='';
-    var ei=parseInt(this.value,10),c=cfg();
-    fillSubj(ei,matchSubject(ei,c.name,c.exam));
+    var ei=num(this.value),c=cfg();
+    fillSubj(ei,ei>-1?matchSubject(ei,c.name,c.exam):-1);
     syncFaqs(false);
   });
   $('faqSubj').addEventListener('change',function(){this.dataset.manual='1';syncFaqs(false);});
+  ['manExam','manSubj','manTopics','manWeight','manNote'].forEach(function(id){
+    $(id).addEventListener('input',function(){if(id==='manExam'||id==='manSubj')this.dataset.edited='1';syncFaqs(false);});
+  });
   $('faqs').addEventListener('input',function(){this.dataset.edited='1';faqHint();});
   $('faqFill').onclick=function(){syncFaqs(true);};
   $('faqAdd').onclick=function(){
-    var t=$('faqType').value,s=sel(),f=buildFaqByType(t,cfg(),s.ei,s.si),m=$('faqHint');
-    if(!f){setMsg(m,t==='1'?'Select an exam and subject first to add FAQ 1.':'Select an exam first to add this FAQ.','err');return;}
+    var t=$('faqType').value,s=sel(),f=buildFaqByType(t,cfg(),s.ei,s.si,man()),m=$('faqHint');
+    if(!f){setMsg(m,t==='1'?'FAQ 1 needs an exam and subject, or fill the manual topics (choose Other).':t==='2'?'FAQ 2 needs an exam, or fill the manual weightage (choose Other as exam).':'Select an exam first.','err');return;}
     var cur=$('faqs').value.trim();
     if(f.q&&cur.indexOf('Q: '+f.q)>-1){setMsg(m,'That FAQ is already in the list.','warn');return;}
     $('faqs').value=(cur?cur+'\n\n':'')+faqToText(f);
@@ -833,7 +912,8 @@ function buildBody(c,qs,meta,intro,faqs,related){
     gm.className='msg '+(data.errors.length?'warn':'ok');
     gm.innerHTML='Generated page with '+n+' questions and '+faqs.length+' FAQs.'+(data.errors.length?' '+data.errors.length+' row(s) skipped or flagged:':'')+issues;
 
-    $('preview').srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#faf9fc}</style></head><body>'+body+'</body></html>';
+    var PV="document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^=\\'#\\']');if(!a)return;e.preventDefault();var t=document.getElementById(a.getAttribute('href').slice(1));if(t)t.scrollIntoView({behavior:'smooth',block:'start'});});";
+    $('preview').srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base target="_blank"><style>body{margin:0;background:#faf9fc}</style><scr'+'ipt>'+PV+'</scr'+'ipt></head><body>'+body+'</body></html>';
     $('results').style.display='block';
     $('results').scrollIntoView({behavior:'smooth'});
   };
